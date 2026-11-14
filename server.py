@@ -532,7 +532,99 @@ class Handler(SimpleHTTPRequestHandler):
             self.send_login()
         return False
 
+    def log_message(self, format, *args):
+        # Orbiscan : aucune trace des adresses (jetons de jumelage) dans les journaux de Render.
+        if "orbiscan" in (getattr(self, "path", "") or ""):
+            return
+        super().log_message(format, *args)
+
+    def client_ip(self):
+        """Adresse du téléphone ou du PC sur internet (Render la donne dans X-Forwarded-For)."""
+        forwarded = (self.headers.get("X-Forwarded-For") or "").split(",")[0].strip()
+        return forwarded or self.client_address[0]
+
+    def read_limited(self, limit):
+        length = int(self.headers.get("Content-Length") or 0)
+        if length < 0 or length > limit:
+            raise ValueError("trop lourd")
+        return self.rfile.read(length) if length else b""
+
+    def send_bytes(self, status, ctype, body):
+        self.send_response(status)
+        self.send_header("Content-Type", ctype)
+        self.send_header("Cache-Control", "no-store")
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
+
+    def orbiscan(self, method):
+        """Orbiscan dans Orbismini (orbiscan_tunnel.py) : vrai si la requête est traitée ici."""
+        path = urlparse(self.path).path
+        if not (path.startswith("/api/orbiscan/") or path == "/orbiscan" or path.startswith("/orbiscan/")):
+            return False
+        import base64
+        import orbiscan_tunnel as T
+
+        # Relais des PC : sans mot de passe d'Orbismini (le PC s'identifie par son secret).
+        if path.startswith("/api/orbiscan/relais/"):
+            if method != "POST":
+                self.send_error(405)
+                return True
+            try:
+                data = json.loads(self.read_limited(T.MAX_BODY * 2) or b"{}")
+                if path == "/api/orbiscan/relais/attente":
+                    out = T.TUNNEL.relay_wait(data.get("pc"), data.get("name"), data.get("key") or {},
+                                              data.get("secret"), self.client_ip())
+                    self.send_json({"requests": out})
+                elif path == "/api/orbiscan/relais/reponse":
+                    T.TUNNEL.relay_answer(data.get("pc"), data.get("secret"), data.get("id"),
+                                          int(data.get("status") or 500), data.get("type"),
+                                          base64.b64decode(data.get("body") or ""))
+                    self.send_json({"ok": True})
+                else:
+                    self.send_error(404)
+            except PermissionError as error:
+                self.send_json({"error": str(error)}, 403)
+            except (ValueError, TypeError, AttributeError):
+                self.send_json({"error": "demande invalide"}, 400)
+            return True
+
+        # Téléphone : session d'Orbismini obligatoire.
+        if not self.guard(path):
+            return True
+        ip = self.client_ip()
+        if path == "/api/orbiscan/peers":
+            self.send_json({"peers": T.TUNNEL.peers(ip)})
+            return True
+        m = re.fullmatch(r"/api/orbiscan/pc/([\w-]{8,40})(/.*)", path)
+        if m:
+            try:
+                body = self.read_limited(T.MAX_BODY) if method == "POST" else b""
+            except ValueError:
+                self.send_json({"error": "trop lourd"}, 413)
+                return True
+            self.send_bytes(*T.TUNNEL.call(ip, m.group(1), method, m.group(2),
+                                           self.headers.get("Content-Type", ""), body))
+            return True
+        if method != "GET":
+            self.send_error(405)
+            return True
+        # Page Orbiscan du PC (la même que sur l'icône), servie par le premier PC du magasin.
+        peers = T.TUNNEL.peers(ip)
+        if not peers:
+            self.send_bytes(200, "text/html; charset=utf-8", T.NO_PC_PAGE.encode("utf-8"))
+            return True
+        home = peers[0]["pc"]
+        sub = path[len("/orbiscan"):] or "/"
+        status, ctype, body = T.TUNNEL.call(ip, home, "GET", "/t" if sub == "/" else sub)
+        if status == 200 and ctype.startswith("text/html"):
+            body = T.page(body.decode("utf-8"), home).encode("utf-8")
+        self.send_bytes(status, ctype, body)
+        return True
+
     def do_POST(self):
+        if self.orbiscan("POST"):
+            return
         if urlparse(self.path).path == "/api/scan/identify":
             # Scanner de pièces : photos (JPEG en base64) → pièces possibles (pieces_scan.py).
             if not self.guard("/api/scan/identify"):
@@ -586,6 +678,8 @@ class Handler(SimpleHTTPRequestHandler):
         return super().do_HEAD()
 
     def do_GET(self):
+        if self.orbiscan("GET"):
+            return
         url = urlparse(self.path)
         if url.path == "/logout":
             self.send_response(303)

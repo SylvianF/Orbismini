@@ -1,5 +1,18 @@
 # Historique
 
+## 15/11/2026 — Orbiscan dans Orbismini
+
+- Le bouton « Orbiscan » ouvre en plein écran la page Orbiscan du PC du magasin, avec seulement
+  une croix en haut à gauche pour revenir : plus de fenêtre Safari.
+- Les demandes passent par Orbismini (orbiscan_tunnel.py), entièrement en mémoire : rien sur disque
+  ni dans les journaux. Chaque photo est chiffrée sur le téléphone avec la clé du PC
+  (RSA-OAEP 2048 + AES-256-GCM, orbiscan-shim.js) ; Orbismini refuse toute photo en clair, l'efface
+  dès que le PC l'a prise, et oublie tout au bout de 2 minutes.
+- Ne marche que sur la connexion du magasin (même sortie internet que le PC). Seules les adresses
+  de la page du téléphone passent, jamais celles du scanner GtaX ni d'Orbis.
+- Le relais de chaque PC doit être mis à jour (module orbiscan_nuage.py). En attendant, l'écran
+  propose d'ouvrir l'Orbiscan du PC par le Wi-Fi, comme avant. L'icône Orbiscan reste inchangée.
+
 ## 14/11/2026 — Orbiscan ouvert dans la même fenêtre (essai abandonné)
 
 - Essai d’ouverture dans la même fenêtre qu’Orbismini : pas mieux sur l’iPhone, plutôt moins bien.

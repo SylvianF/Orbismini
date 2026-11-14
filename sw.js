@@ -1,5 +1,5 @@
 // Une seule valeur à changer à chaque version (identique au ?v= de index.html).
-const VERSION = '20261114-orbiscan-retour';
+const VERSION = '20261115-orbiscan-integre';
 const CACHE = 'mon-or-' + VERSION;
 self.addEventListener('install', e => {
   self.skipWaiting();
@@ -56,7 +56,8 @@ self.addEventListener('activate', e =>
 self.addEventListener('fetch', e => {
   if (
     new URL(e.request.url).origin !== self.location.origin ||
-    new URL(e.request.url).pathname.includes('/api/')
+    new URL(e.request.url).pathname.includes('/api/') ||
+    new URL(e.request.url).pathname.startsWith('/orbiscan')
   )
     return;
   e.respondWith(
