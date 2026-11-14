@@ -1,5 +1,11 @@
 # Historique
 
+## 15/11/2026 — Orbiscan : adresse du téléphone impossible à falsifier
+
+- L'adresse internet qui sert à reconnaître la connexion du magasin est lue dans True-Client-IP (ou
+  CF-Connecting-IP), posés par Cloudflare devant Render, et plus dans X-Forwarded-For, dont le début
+  peut être écrit par l'appelant. Vérifié sur le vrai Render : une fausse adresse est ignorée.
+
 ## 15/11/2026 — Orbiscan : chaque PC retenu pour de bon
 
 - À sa première venue, chaque PC est retenu avec l'empreinte de son secret et de sa clé (fichier

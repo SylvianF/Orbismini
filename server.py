@@ -539,9 +539,15 @@ class Handler(SimpleHTTPRequestHandler):
         super().log_message(format, *args)
 
     def client_ip(self):
-        """Adresse du téléphone ou du PC sur internet (Render la donne dans X-Forwarded-For)."""
-        forwarded = (self.headers.get("X-Forwarded-For") or "").split(",")[0].strip()
-        return forwarded or self.client_address[0]
+        """Adresse du téléphone ou du PC sur internet. Jamais X-Forwarded-For : son début est écrit par
+        l'appelant et sa fin par Render (adresses internes, les mêmes pour tous). Vérifié sur Render le
+        15/11/2026 : True-Client-IP et CF-Connecting-IP sont posés par Cloudflare, une valeur envoyée par
+        l'appelant est remplacée (True-Client-IP) ou la demande refusée (CF-Connecting-IP)."""
+        for header in ("True-Client-IP", "CF-Connecting-IP"):
+            value = (self.headers.get(header) or "").strip()
+            if value:
+                return value
+        return self.client_address[0]
 
     def read_limited(self, limit):
         length = int(self.headers.get("Content-Length") or 0)
@@ -572,11 +578,6 @@ class Handler(SimpleHTTPRequestHandler):
         import base64
         import orbiscan_tunnel as T
 
-        if path == "/api/orbiscan/adresse-essai":
-            # PROVISOIRE (vérification de l'adresse vue par Render) : renvoie à l'appelant ses propres en-têtes.
-            self.send_json({h: self.headers.get(h) for h in ("X-Forwarded-For", "CF-Connecting-IP", "True-Client-IP",
-                                                              "X-Real-IP", "Forwarded")} | {"socket": self.client_address[0]})
-            return True
         # Relais des PC : sans mot de passe d'Orbismini (le PC s'identifie par son secret).
         if path.startswith("/api/orbiscan/relais/"):
             if method != "POST":

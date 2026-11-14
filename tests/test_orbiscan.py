@@ -35,6 +35,25 @@ def relay(tunnel, pc="pc-magasin", ip=SHOP, answer=(200, "application/json", b'{
     return t
 
 
+class AddressTests(unittest.TestCase):
+    """Adresse vue par Orbismini : une fausse adresse envoyée par l'appelant ne compte pas."""
+
+    def ip(self, headers):
+        import server
+
+        h = server.Handler.__new__(server.Handler)
+        h.headers, h.client_address = headers, ("127.0.0.1", 1)
+        return h.client_ip()
+
+    def test_forged_forwarded_address_ignored(self):
+        # Ce que Render transmet quand l'appelant ajoute lui-même un faux début (relevé le 15/11/2026).
+        real = {"X-Forwarded-For": "81.250.10.20,86.225.248.74, 172.71.232.16, 10.31.60.5",
+                "True-Client-IP": "86.225.248.74", "CF-Connecting-IP": "86.225.248.74"}
+        self.assertEqual(self.ip(real), "86.225.248.74")
+        self.assertEqual(self.ip({"X-Forwarded-For": SHOP}), "127.0.0.1")      # jamais X-Forwarded-For
+        self.assertEqual(self.ip({"CF-Connecting-IP": "86.225.248.74"}), "86.225.248.74")
+
+
 class TunnelTests(unittest.TestCase):
     def setUp(self):
         self.tunnel = T.Tunnel()
