@@ -572,6 +572,11 @@ class Handler(SimpleHTTPRequestHandler):
         import base64
         import orbiscan_tunnel as T
 
+        if path == "/api/orbiscan/adresse-essai":
+            # PROVISOIRE (vérification de l'adresse vue par Render) : renvoie à l'appelant ses propres en-têtes.
+            self.send_json({h: self.headers.get(h) for h in ("X-Forwarded-For", "CF-Connecting-IP", "True-Client-IP",
+                                                              "X-Real-IP", "Forwarded")} | {"socket": self.client_address[0]})
+            return True
         # Relais des PC : sans mot de passe d'Orbismini (le PC s'identifie par son secret).
         if path.startswith("/api/orbiscan/relais/"):
             if method != "POST":
