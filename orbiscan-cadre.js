@@ -1,14 +1,28 @@
-// Bouton « Orbiscan » de la barre du bas : ouvre la page Orbiscan du PC du magasin en plein
-// écran (servie par Orbismini, /orbiscan/), avec seulement une croix en haut à gauche pour quitter.
+// Bouton « Orbiscan » de la barre du bas : ouvre la page Orbiscan du PC du magasin (servie par
+// Orbismini, /orbiscan/) au-dessus de l'écran, en laissant la barre du bas visible : un autre
+// bouton de la barre (ou la croix en haut à gauche) referme Orbiscan.
 (() => {
   'use strict';
   const button = document.getElementById('orbiscan-open');
-  if (!button) return;
+  const nav = document.querySelector('.views');
+  if (!button || !nav) return;
   let frame = null;
-  function close() {
-    frame?.remove();
-    frame = null;
+
+  function press(active) {
+    nav.querySelectorAll('button').forEach(b =>
+      b.setAttribute('aria-pressed', String(active ? b === button : b.dataset.view === document.body.dataset.view))
+    );
   }
+  function close() {
+    if (!frame) return;
+    frame.remove();
+    frame = null;
+    press(false);
+  }
+  function fit() {
+    if (frame) frame.style.bottom = nav.offsetHeight + 'px';
+  }
+
   button.addEventListener('click', () => {
     if (frame) return;
     frame = document.createElement('div');
@@ -25,6 +39,11 @@
     x.onclick = close;
     frame.append(page, x);
     document.body.append(frame);
+    fit();
+    press(true);
   });
+  // Cours, Météo, Pièces, Rachat : on quitte Orbiscan pour l'onglet touché.
+  nav.addEventListener('click', e => e.target.closest('button[data-view]') && close(), true);
+  window.addEventListener('resize', fit);
   window.addEventListener('keydown', e => e.key === 'Escape' && close());
 })();

@@ -3,7 +3,7 @@
   // Deux vues : Cours (cotations seules) et Rachat (tous les calculs).
   const nav = document.querySelector('.views');
   nav.addEventListener('click', e => {
-    const b = e.target.closest('[data-view]');
+    const b = e.target.closest('button[data-view]'); // pas <body data-view> (bouton Orbiscan)
     if (!b) return;
     if (typeof selected !== 'undefined' && selected) closeBuy();
     document.body.dataset.view = b.dataset.view;

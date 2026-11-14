@@ -1163,8 +1163,8 @@ body::before {
 .cs-warn { color: #e9bf75; }
 .cs-sheet a { display: block; margin: 8px 0; color: var(--gold); }
 
-/* Orbiscan en plein écran (orbiscan-cadre.js) : la page du PC, et seulement une croix pour quitter. */
-#orbiscan-frame { position: fixed; inset: 0; z-index: 200; background: #f5f5f7; }
+/* Orbiscan (orbiscan-cadre.js) : la page du PC sur tout l'écran sauf la barre du bas, et une croix pour quitter. */
+#orbiscan-frame { position: fixed; inset: 0; z-index: 25; background: #f5f5f7; }
 #orbiscan-frame iframe { width: 100%; height: 100%; border: 0; display: block; }
 #orbiscan-frame .close { position: absolute; top: calc(env(safe-area-inset-top) + 10px); left: 10px; width: 40px; height: 40px;
   border: 0; border-radius: 50%; background: rgba(0, 0, 0, 0.06); color: #444; font-size: 22px; line-height: 40px; padding: 0; }

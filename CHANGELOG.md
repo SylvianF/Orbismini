@@ -1,5 +1,10 @@
 # Historique
 
+## 15/11/2026 — Orbiscan : barre du bas toujours visible
+
+- Orbiscan s'ouvre au-dessus de l'écran mais laisse la barre du bas (Cours, Météo, Orbiscan, Pièces,
+  Rachat) : un autre bouton de la barre, ou la croix en haut à gauche, referme Orbiscan.
+
 ## 15/11/2026 — Orbiscan dans Orbismini
 
 - Le bouton « Orbiscan » ouvre en plein écran la page Orbiscan du PC du magasin, avec seulement
