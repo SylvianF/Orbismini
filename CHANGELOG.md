@@ -1,5 +1,10 @@
 # Historique
 
+## 14/11/2026 — Orbiscan ouvert dans la même fenêtre (essai)
+
+- Le bouton Orbiscan ouvre la page du PC dans la même fenêtre qu’Orbismini, et non plus dans une
+  nouvelle : essai pour que l’iPhone affiche un cadre plus discret. Revenir en arrière si ce n’est pas mieux.
+
 ## 14/11/2026 — Barre du bas : Cours, Météo, Orbiscan, Pièces, Rachat
 
 - Nouvel ordre des boutons : Cours / Météo / Orbiscan / Pièces / Rachat.
