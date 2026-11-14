@@ -80,6 +80,11 @@ def valid_key(key):
         return False
 
 
+def validate(pc, key, secret):
+    if not re.fullmatch(r"[\w-]{8,40}", str(pc or "")) or not valid_key(key) or len(str(secret or "")) < 20:
+        raise PermissionError("relais invalide")
+
+
 class Tunnel:
     def __init__(self, clock=time.monotonic):
         self.clock = clock
@@ -104,8 +109,7 @@ class Tunnel:
     # ---------------------------------------------------------------- relais du PC
     def relay_wait(self, pc, name, key, secret, ip, wait=RELAY_WAIT):
         """Ligne ouverte du relais : rend les demandes du téléphone dès qu'il y en a."""
-        if not re.fullmatch(r"[\w-]{8,40}", str(pc or "")) or not valid_key(key) or len(str(secret or "")) < 20:
-            raise PermissionError("relais invalide")
+        validate(pc, key, secret)
         digest = hashlib.sha256(str(secret).encode()).hexdigest()
         with self.lock:
             self._purge()

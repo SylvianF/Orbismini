@@ -1,5 +1,14 @@
 # Historique
 
+## 15/11/2026 — Orbiscan : chaque PC retenu pour de bon
+
+- À sa première venue, chaque PC est retenu avec l'empreinte de son secret et de sa clé (fichier
+  pc.json de la branche orbiscan-pc, sur GitHub) : ensuite, tout autre secret ou toute autre clé
+  est refusé, même après un redémarrage de Render. Sans clé GitHub ou si GitHub ne répond pas,
+  aucun nouveau PC n'est accepté.
+- Page /orbiscan-pc : liste des PC retenus et remise à zéro, avec le code de Sylvian (ORBISCAN_ADMIN).
+- Réglages Render à ajouter : ORBISCAN_GITHUB_TOKEN et ORBISCAN_ADMIN.
+
 ## 15/11/2026 — Orbiscan : barre du bas toujours visible
 
 - Orbiscan s'ouvre au-dessus de l'écran mais laisse la barre du bas (Cours, Météo, Orbiscan, Pièces,

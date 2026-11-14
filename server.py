@@ -560,6 +560,13 @@ class Handler(SimpleHTTPRequestHandler):
     def orbiscan(self, method):
         """Orbiscan dans Orbismini (orbiscan_tunnel.py) : vrai si la requête est traitée ici."""
         path = urlparse(self.path).path
+        if path == "/orbiscan-pc":
+            # Page de Sylvian : PC retenus, remise à zéro.
+            if self.guard(path):
+                import orbiscan_pc
+
+                self.send_bytes(200, "text/html; charset=utf-8", orbiscan_pc.ADMIN_PAGE.encode("utf-8"))
+            return True
         if not (path.startswith("/api/orbiscan/") or path == "/orbiscan" or path.startswith("/orbiscan/")):
             return False
         import base64
@@ -573,6 +580,11 @@ class Handler(SimpleHTTPRequestHandler):
             try:
                 data = json.loads(self.read_limited(T.MAX_BODY * 2) or b"{}")
                 if path == "/api/orbiscan/relais/attente":
+                    import orbiscan_pc
+
+                    # PC retenu à sa première venue (GitHub) : ni autre secret, ni autre clé ensuite.
+                    T.validate(data.get("pc"), data.get("key") or {}, data.get("secret"))
+                    orbiscan_pc.STORE.check(data.get("pc"), data.get("name"), data.get("secret"), data.get("key"))
                     out = T.TUNNEL.relay_wait(data.get("pc"), data.get("name"), data.get("key") or {},
                                               data.get("secret"), self.client_ip())
                     self.send_json({"requests": out})
@@ -593,6 +605,20 @@ class Handler(SimpleHTTPRequestHandler):
         if not self.guard(path):
             return True
         ip = self.client_ip()
+        if path == "/api/orbiscan/pc-admin" and method == "POST":
+            # Sylvian : liste des PC retenus et remise à zéro (code ORBISCAN_ADMIN).
+            import orbiscan_pc
+
+            try:
+                data = json.loads(self.read_limited(10_000) or b"{}")
+                if data.get("reset"):
+                    orbiscan_pc.STORE.reset(data.get("code"), str(data["reset"]))
+                self.send_json({"pcs": orbiscan_pc.STORE.listing(data.get("code"))})
+            except PermissionError as error:
+                self.send_json({"error": str(error)}, 403)
+            except (ValueError, TypeError):
+                self.send_json({"error": "demande invalide"}, 400)
+            return True
         if path == "/api/orbiscan/peers":
             self.send_json({"peers": T.TUNNEL.peers(ip)})
             return True

@@ -19,3 +19,9 @@ services:
         sync: false
       - key: NUMISTA_API_KEY
         sync: false
+      # Orbiscan par Orbismini : clé GitHub limitée à ce dépôt (Contents : lecture et écriture),
+      # pour retenir chaque PC (branche orbiscan-pc) ; code de Sylvian pour remettre un PC à zéro.
+      - key: ORBISCAN_GITHUB_TOKEN
+        sync: false
+      - key: ORBISCAN_ADMIN
+        sync: false
