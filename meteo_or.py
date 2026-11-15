@@ -8,7 +8,7 @@ Sources (lues au plus toutes les 30 minutes) :
   - or et argent en euros : graphiques BullionVault (comme la page « Cours ») ;
   - dollar (indice DXY), euro/dollar, taux américain 10 ans, indice de la peur (VIX) :
     Yahoo Finance ;
-  - prime du Napoléon : cotation CPoR et instantané (fournis par le serveur d’OrApp).
+  - prime du Napoléon : cotation CPoR et instantané (fournis par le serveur d’Orbismini).
 Repris de GoldGestion / Orbis (meteo_or.py) : mêmes indices, seuils, textes et historique.
 Un indice indisponible est simplement absent.
 Historique : la météo des 20 derniers jours ouvrés est recalculée avec les mêmes séries,

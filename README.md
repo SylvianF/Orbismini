@@ -35,7 +35,7 @@ l’application reste ouverte à tous.
 ## Widget iPhone
 
 Cours et courbe sur l’écran d’accueil grâce à l’app Scriptable : script
-`widget/OrApp-widget.js`, mode d’emploi `widget/LISEZ-MOI-WIDGET.txt`. Le widget lit
+`widget/Orbismini-widget.js`, mode d’emploi `widget/LISEZ-MOI-WIDGET.txt`. Le widget lit
 `/api/widget` avec sa propre clé (`GOLDAPP_WIDGET_KEY` sur Render), sans le mot de passe.
 
 ## Sources des cours
@@ -58,7 +58,7 @@ Cours et courbe sur l’écran d’accueil grâce à l’app Scriptable : script
 - Calculs repris de l’ancienne GoldApp : `estimation.js` + `estimation.css`, `alignment.js`,
   `fiscal.js`, `mobile.js` (onglets, achat bijoux), `quick-prices.js`, `print.js`.
 - Serveur : `server.py` et `kitco.py`, `cpor.py`, `bullionvault*.py`, `market.py`.
-- `icon.svg`, `icon.png`, `favicon.ico` : icône d’OrApp, tirée du logo d’Orbis.
+- `icon.svg`, `icon.png`, `favicon.ico` : icône d’Orbismini, tirée du logo d’Orbis.
 - `img/cpor/` (or) et `img/argent/` (argent, d’après Gold.fr) : vignettes des produits.
 - `docs/historique/` : anciennes notes de version (non publiées).
 

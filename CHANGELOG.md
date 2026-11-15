@@ -1,5 +1,13 @@
 # Historique
 
+## 15/11/2026 — Nom « Orbismini » partout
+
+- Widget de l'écran d'accueil (Scriptable) : titre « Orbismini », fichier renommé
+  widget/Orbismini-widget.js, mode d'emploi mis à jour. Pour voir le nouveau titre sur un widget déjà
+  installé, recopier le script dans Scriptable.
+- README, commentaires : Orbismini. Les identifiants internes (canal ntfy orapp-…, clé d'alerte)
+  ne changent pas, pour ne pas casser la liaison avec Orbis et l'iPhone.
+
 ## 15/11/2026 — Orbiscan : adresse du téléphone impossible à falsifier
 
 - L'adresse internet qui sert à reconnaître la connexion du magasin est lue dans True-Client-IP (ou
