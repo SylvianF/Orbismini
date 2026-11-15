@@ -64,7 +64,10 @@ else {
 let selected = null;
 let spotValue = null,
   spotPoints = [],
-  spotPeriod = 1,
+  // Dernière durée de courbe consultée (1 jour la toute première fois).
+  spotPeriod = [1, 7, 30, 365, 1825, 3650].includes(Number(localStorage.getItem('goldapp-chart-period')))
+    ? Number(localStorage.getItem('goldapp-chart-period'))
+    : 1,
   spotMetal = localStorage.getItem('goldapp-chart-metal') === 'silver' ? 'silver' : 'gold',
   goldMeta = 'Chargement du cours spot…';
 // Frais par défaut : 4 % sur le lingot 1 kg, 7,5 % sur le reste de l’or.
@@ -552,6 +555,7 @@ async function loadSpotHistory() {
 document.querySelectorAll('[data-period]').forEach(b =>
   b.addEventListener('click', () => {
     spotPeriod = Number(b.dataset.period);
+    localStorage.setItem('goldapp-chart-period', String(spotPeriod));
     loadSpotHistory();
   })
 );

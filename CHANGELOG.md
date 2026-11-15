@@ -1,5 +1,10 @@
 # Historique
 
+## 15/11/2026 — Courbe : dernière durée gardée
+
+- À l'ouverture, la courbe du cours reprend la dernière durée consultée (1 j, 7 j, 1 mois, 1 an,
+  5 ans ou 10 ans), comme le métal (or ou argent) ; 1 jour seulement la toute première fois.
+
 ## 15/11/2026 — Nom « Orbismini » partout
 
 - Widget de l'écran d'accueil (Scriptable) : titre « Orbismini », fichier renommé
