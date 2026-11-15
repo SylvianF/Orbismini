@@ -1,5 +1,18 @@
 # Historique
 
+## 15/11/2026 — Alerte de cours propre à chaque téléphone
+
+- Chaque téléphone a sa propre alerte (seuils, variation sur 24 h) et son propre canal ntfy : les
+  autres ne la voient pas, ne la changent pas et ne la reçoivent pas. Identifiant secret tiré à la
+  première ouverture, gardé sur le téléphone (Safari et l'icône de l'écran d'accueil comptent
+  comme deux téléphones).
+- Gardée sur GitHub (fichier alertes.json de la branche « alertes », même clé que les PC
+  d'Orbiscan) : seulement l'empreinte de l'identifiant, les seuils et les dernières alertes. Le
+  canal ntfy n'y est pas (calculé avec le mot de passe d'Orbismini).
+- « Suivre l'alerte d'Orbis », avec le code de Sylvian (ORBISCAN_ADMIN) : ce téléphone règle et
+  reçoit l'alerte commune avec Orbis, comme avant ; « Alerte propre à ce téléphone » pour revenir.
+- Le contrôle toutes les 10 minutes vérifie les deux, avec un seul relevé du cours.
+
 ## 15/11/2026 — Courbe : dernière durée gardée
 
 - À l'ouverture, la courbe du cours reprend la dernière durée consultée (1 j, 7 j, 1 mois, 1 an,

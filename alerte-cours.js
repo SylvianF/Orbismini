@@ -1,5 +1,6 @@
-// Alerte de cours de l’or, commune avec Orbis : mêmes seuils sur l’iPhone et sur les postes.
-// Le serveur contrôle le cours toutes les 10 minutes et prévient l’iPhone par l’appli ntfy.
+// Alerte de cours de l’or : propre à chaque téléphone (ses seuils, son canal ntfy), ou commune avec
+// Orbis pour le téléphone relié avec le code de Sylvian (alerte_appareils.py).
+// Le serveur contrôle le cours toutes les 10 minutes et prévient le téléphone par l’appli ntfy.
 (() => {
   'use strict';
   const box = document.getElementById('gold-alert');
@@ -19,35 +20,56 @@
   const when = iso =>
     new Date(iso).toLocaleString('fr-FR', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' });
   const KEY = 'orapp-alerte';
+  // Identifiant secret de ce téléphone, tiré une fois (envoyé seulement à Orbismini).
+  const device = (() => {
+    try {
+      let id = localStorage.getItem('orbismini-appareil');
+      if (!/^[0-9a-f]{32}$/.test(id || '')) {
+        id = [...crypto.getRandomValues(new Uint8Array(16))].map(x => x.toString(16).padStart(2, '0')).join('');
+        localStorage.setItem('orbismini-appareil', id);
+      }
+      return id;
+    } catch {
+      return '';
+    }
+  })();
   let state = null;
 
-  async function call(body) {
-    const r = await fetch('/api/alert', body
-      ? { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body), cache: 'no-store' }
-      : { cache: 'no-store' });
+  async function call(body, path = '/api/alert') {
+    const headers = { 'X-Appareil': device };
+    if (body) headers['Content-Type'] = 'application/json';
+    const r = await fetch(path, body
+      ? { method: 'POST', headers, body: JSON.stringify(body), cache: 'no-store' }
+      : { headers, cache: 'no-store' });
     const data = await r.json();
     if (!r.ok) throw Error(data.error || 'HTTP ' + r.status);
     state = data;
-    try {
-      localStorage.setItem(KEY, JSON.stringify({ above: data.above, below: data.below, move: data.move, updated: data.updated, hits: data.hits }));
-    } catch {}
+    if (data.mode !== 'appareil')
+      try {
+        localStorage.setItem(KEY, JSON.stringify({ above: data.above, below: data.below, move: data.move, updated: data.updated, hits: data.hits }));
+      } catch {}
     return data;
   }
 
-  // Après un redémarrage du serveur, l’état gardé sur l’iPhone est renvoyé (le plus récent l’emporte).
+  // Alerte d’Orbis : après un redémarrage du serveur, l’état gardé sur l’iPhone est renvoyé
+  // (le plus récent l’emporte). L’alerte propre au téléphone, elle, est gardée sur GitHub.
   async function load() {
+    let error = '';
     try {
       await call();
       const kept = JSON.parse(localStorage.getItem(KEY) || 'null');
-      if (kept?.updated && (!state.updated || kept.updated > state.updated)) await call(kept);
-    } catch {}
-    draw();
+      if (state.mode !== 'appareil' && kept?.updated && (!state.updated || kept.updated > state.updated)) await call(kept);
+    } catch (e) {
+      error = e.message;
+    }
+    draw(error, !!error);
   }
 
   function draw(message, bad) {
     const a = state;
     box.hidden = !a;
     if (!a) return;
+    const own = a.mode === 'appareil';
     const field = (name, label) => {
       const input = el('input', {
         name,
@@ -97,7 +119,8 @@
       if (move != null && !(move >= 0.5 && move <= 20)) return refuse('Saisir une variation entre 0,5 et 20 %, par exemple 2.');
       if (a.price && above != null && above <= a.price) return refuse('Le cours est déjà au-dessus de ' + kilo(above) + ' : choisir un seuil plus haut.');
       if (a.price && below != null && below >= a.price) return refuse('Le cours est déjà en dessous de ' + kilo(below) + ' : choisir un seuil plus bas.');
-      send(above, below, move, above || below || move ? 'Alerte enregistrée, aussi pour les postes d’Orbis.' : 'Alerte retirée.');
+      send(above, below, move, !(above || below || move) ? 'Alerte retirée.'
+        : own ? 'Alerte enregistrée pour ce téléphone.' : 'Alerte enregistrée, aussi pour les postes d’Orbis.');
     };
     const active = [a.above && level(a.above, 'above'), a.below && level(a.below, 'below'),
       a.move && 'en cas de hausse ou de baisse de plus de ' + pct(a.move) + ' sur 24 h'].filter(Boolean);
@@ -119,8 +142,12 @@
       el('p', {
         className: 'small' + (active.length ? ' ga-on' : ''),
         textContent: active.length
-          ? '🔔 Active : prévenir ' + active.join(' ou ') + '. Mêmes réglages sur les postes d’Orbis ; un seuil sonne une fois, la variation reste surveillée (une alerte par sens et par jour au plus).'
-          : 'Aucune alerte en place. Les réglages faits ici valent aussi pour les postes d’Orbis.',
+          ? '🔔 Active : prévenir ' + active.join(' ou ') + '. ' +
+            (own ? 'Alerte propre à ce téléphone' : 'Mêmes réglages sur les postes d’Orbis') +
+            ' ; un seuil sonne une fois, la variation reste surveillée (une alerte par sens et par jour au plus).'
+          : own
+            ? 'Aucune alerte en place. L’alerte réglée ici est propre à ce téléphone : les autres ne la voient pas et ne la reçoivent pas.'
+            : 'Aucune alerte en place. Les réglages faits ici valent aussi pour les postes d’Orbis.',
       }),
       last ? el('p', { className: 'small', textContent: 'Dernière alerte : or ' + what(last) + ', le ' + when(last.at) + ' (' + kilo(last.price) + ').' }) : null,
       a.channel
@@ -132,7 +159,40 @@
             el('p', { className: 'ga-channel', textContent: a.channel }),
             copy)
         : null,
+      linkBox(own),
     ].filter(Boolean));
+  }
+
+  // Alerte d’Orbis : ce téléphone s’y relie avec le code de Sylvian, ou reprend la sienne.
+  function linkBox(own) {
+    const msg = el('p', { className: 'small' });
+    const go = async (path, body, done) => {
+      try {
+        await call(body, path);
+        draw(done);
+      } catch (e) {
+        msg.className = 'small ga-bad';
+        msg.textContent = e.message;
+      }
+    };
+    if (!own)
+      return el('details', { className: 'ga-help' },
+        el('summary', { textContent: 'Ce téléphone suit l’alerte d’Orbis' }),
+        el('p', { className: 'small', textContent: 'Les seuils sont communs avec les postes d’Orbis. Tu peux reprendre une alerte propre à ce téléphone, avec un autre canal ntfy.' }),
+        el('button', { type: 'button', className: 'secondary', textContent: 'Alerte propre à ce téléphone',
+          onclick: () => go('/api/alert/detacher', {}, 'Ce téléphone a maintenant sa propre alerte.') }),
+        msg);
+    const code = el('input', { type: 'password', placeholder: 'Code de Sylvian', autocomplete: 'off' });
+    const form = el('form', { className: 'ga-link' }, code,
+      el('button', { type: 'submit', className: 'secondary', textContent: 'Relier' }));
+    form.onsubmit = e => {
+      e.preventDefault();
+      if (code.value) go('/api/alert/lier', { code: code.value }, 'Ce téléphone suit maintenant l’alerte d’Orbis.');
+    };
+    return el('details', { className: 'ga-help' },
+      el('summary', { textContent: 'Suivre l’alerte d’Orbis' }),
+      el('p', { className: 'small', textContent: 'Réservé à Sylvian : mêmes seuils que les postes d’Orbis, avec son code.' }),
+      form, msg);
   }
 
   const visible = () => document.body.dataset.view === 'meteo';

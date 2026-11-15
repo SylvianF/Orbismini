@@ -1114,6 +1114,15 @@ body::before {
   color: var(--gold);
   font-size: 14px;
 }
+.ga-link {
+  display: flex;
+  gap: 8px;
+  margin: 8px 0;
+}
+.ga-link input {
+  flex: 1;
+  min-width: 0;
+}
 .ga-channel {
   margin: 10px 0;
   padding: 10px 12px;

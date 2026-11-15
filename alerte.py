@@ -193,15 +193,19 @@ def notify(s, key, post=None):
             age = 0
         if age > 6 * 3600:
             continue
-        title = what(h)
-        body = ("Cours " + kilo(h["price"]) + (", contre " + kilo(h["ref"]) + " 24 h plus tôt" if h.get("ref") else "")
-                + " (BullionVault). Ouvrir Orbismini pour régler une nouvelle alerte.")
         try:
-            post(topic, title, body)
+            send(topic, h, post)
             out.append(h["id"])
         except Exception:
             _sent.discard(h["id"])  # réessayé au prochain contrôle
     return out
+
+
+def send(topic, h, post=None):
+    """Une alerte vers un canal ntfy."""
+    body = ("Cours " + kilo(h["price"]) + (", contre " + kilo(h["ref"]) + " 24 h plus tôt" if h.get("ref") else "")
+            + " (BullionVault). Ouvrir Orbismini pour régler une nouvelle alerte.")
+    (post or _post)(topic, what(h), body)
 
 
 def _post(topic, title, body):

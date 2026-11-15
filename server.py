@@ -493,6 +493,26 @@ class Handler(SimpleHTTPRequestHandler):
         given = self.headers.get("X-Alert-Key", "")
         return bool(ALERT_KEY) and hmac.compare_digest(given.encode(), ALERT_KEY.encode())
 
+    def phone_alert(self, body=None):
+        """Alerte du téléphone (session + identifiant X-Appareil) : la sienne, ou celle d’Orbis
+        s’il y est relié. None : demande d’Orbis ou d’une ancienne page (alerte commune)."""
+        import alerte
+        import alerte_appareils as AA
+
+        did = AA.device_id(self.headers.get("X-Appareil"))
+        if not did or not self.authorized():
+            return None
+        if AA.STORE.linked(did):
+            if body is not None:
+                alerte.update(body, ALERT_KEY)
+            return dict(alert_view(True), mode="orbis")
+        out = AA.STORE.update(did, body) if body is not None else AA.STORE.view(did)
+        try:
+            out["price"] = alert_price()[0]
+        except Exception:
+            pass
+        return dict(out, mode="appareil")
+
     def send_json(self, data, status=200):
         payload = json.dumps(data, ensure_ascii=False).encode("utf-8")
         self.send_response(status)
@@ -682,10 +702,37 @@ class Handler(SimpleHTTPRequestHandler):
 
             try:
                 length = min(int(self.headers.get("Content-Length") or 0), 50_000)
-                alerte.update(json.loads(self.rfile.read(length) or b"{}"), ALERT_KEY)
+                body = json.loads(self.rfile.read(length) or b"{}")
+                mine = self.phone_alert(body)
+                if mine is not None:
+                    return self.send_json(mine)
+                alerte.update(body, ALERT_KEY)
                 return self.send_json(alert_view(self.authorized()))
             except (ValueError, TypeError) as error:
                 return self.send_json({"error": str(error)[:200]}, 400)
+            except PermissionError as error:
+                return self.send_json({"error": str(error)[:200]}, 503)
+        if urlparse(self.path).path in ("/api/alert/lier", "/api/alert/detacher"):
+            # Téléphone relié à l’alerte d’Orbis (code de Sylvian) ou rendu à sa propre alerte.
+            if not self.guard("/api/alert/lier"):
+                return
+            import alerte_appareils as AA
+
+            did = AA.device_id(self.headers.get("X-Appareil"))
+            if not did:
+                return self.send_json({"error": "Téléphone non reconnu, recharge la page."}, 400)
+            try:
+                length = min(int(self.headers.get("Content-Length") or 0), 4096)
+                body = json.loads(self.rfile.read(length) or b"{}")
+                if urlparse(self.path).path == "/api/alert/lier":
+                    AA.STORE.link(did, body.get("code"))
+                else:
+                    AA.STORE.unlink(did)
+                return self.send_json(self.phone_alert())
+            except (ValueError, TypeError) as error:
+                return self.send_json({"error": str(error)[:200]}, 400)
+            except PermissionError as error:
+                return self.send_json({"error": str(error)[:200]}, 403 if "Code" in str(error) else 503)
         if urlparse(self.path).path != "/login" or not PASSWORD:
             return self.send_error(404)
         length = min(int(self.headers.get("Content-Length") or 0), 4096)
@@ -729,7 +776,11 @@ class Handler(SimpleHTTPRequestHandler):
         if not self.guard(url.path):
             return
         if url.path == "/api/alert":
-            return self.send_json(alert_view(self.authorized()))
+            try:
+                mine = self.phone_alert()
+            except PermissionError as error:
+                return self.send_json({"error": str(error)[:200]}, 503)
+            return self.send_json(mine if mine is not None else alert_view(self.authorized()))
         if url.path in ("/api/scan/state", "/api/scan/search", "/api/scan/coin"):
             # Scanner de pièces : clés présentes, recherche dans Numista, fiche d'une pièce.
             import pieces_scan
@@ -747,10 +798,15 @@ class Handler(SimpleHTTPRequestHandler):
         if url.path == "/api/alert/check":
             import alerte
 
-            try:
-                alerte.check(alert_price, ALERT_KEY)
-            except Exception:
-                pass
+            import alerte_appareils as AA
+
+            got = []
+            loader = lambda: got[0] if got else got.append(alert_price()) or got[0]  # cours lu une fois
+            for run in (lambda: alerte.check(loader, ALERT_KEY), lambda: AA.STORE.check(loader)):
+                try:
+                    run()
+                except Exception:
+                    pass
             return self.send_json({"ok": True})
         if url.path in ROUTES:
             try:
