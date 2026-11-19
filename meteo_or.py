@@ -104,6 +104,24 @@ def _daily(points):
     return [days[d] for d in sorted(days)]
 
 
+RSI_DAYS = 20  # 14 jours de bourse ≈ 20 jours : même fenêtre que le RSI de la courbe (curves.js)
+
+
+def _rsi_window(points, days=RSI_DAYS):
+    """Dernier cours de chaque jour des 20 derniers jours, plus celui d'avant (première variation),
+    comme la courbe : BullionVault cote aussi le week-end, 14 jours de calendrier ne feraient
+    qu'environ 10 jours de bourse."""
+    dated = {}
+    for at, price in points:
+        dated[at.date()] = price
+    days_ = sorted(dated)
+    if not days_:
+        return []
+    since = days_[-1] - timedelta(days=days)
+    first = next(i for i, d in enumerate(days_) if d > since)
+    return [dated[d] for d in days_[max(0, first - 1):]]
+
+
 def rsi(closes, n=14):
     gains = losses = 0.0
     for a, b in zip(closes[-n - 1 : -1], closes[-n:]):
@@ -216,8 +234,9 @@ def compute(now, src):
         add("month", "Tendance", "Élan du mois", ("+" if month > 0 else "") + fr(month, 1) + " %", s,
             "Sur un mois, l'or a " + ("pris " if month >= 0 else "perdu ") + fr(abs(month), 1) + " %"
             + (" : l'élan est haussier." if s > 0 else " : l'élan est baissier." if s < 0 else " : pas d'élan marqué."))
-    if len(daily) >= 15:
-        r = rsi(daily)
+    window = _rsi_window(quarter) if quarter else []
+    if len(window) >= 9:
+        r = rsi(window, len(window) - 1)
         s = -1 if r > 70 else 1 if r < 30 else 0
         add("rsi", "Tendance", "Essoufflement (RSI)", fr(r) + " / 100", s,
             "Au-dessus de 70, la hausse a été rapide : une pause ou un repli est fréquent. Sous 30, un rebond est fréquent. "

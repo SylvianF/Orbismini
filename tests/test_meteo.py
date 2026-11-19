@@ -121,6 +121,16 @@ class WeatherTests(unittest.TestCase):
         self.assertEqual(M.rsi(list(range(1, 30))), 100.0)
         self.assertAlmostEqual(M.rsi([10, 11] * 10), 50.0, delta=5)
 
+    def test_rsi_window_like_the_curve(self):
+        # 20 jours de calendrier (14 jours de bourse), week-ends compris, plus le cours d'avant.
+        from datetime import datetime, timedelta, timezone
+        start = datetime(2026, 10, 1, 12, tzinfo=timezone.utc)
+        points = [(start + timedelta(hours=12 * i), 1000 + i) for i in range(100)]
+        w = M._rsi_window(points)
+        self.assertEqual(len(w), 21)
+        self.assertEqual(w[-1], 1099)
+        self.assertEqual(w[0], 1060)   # dernier cours du 31 octobre (veille de la fenêtre, dernier jour : 20 novembre)
+
 
 def dated(values):
     """Série Yahoo datée : une valeur par jour ouvré jusqu'à NOW."""

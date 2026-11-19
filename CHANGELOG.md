@@ -1,5 +1,11 @@
 # Historique
 
+## 20/11/2026 — Météo de l'or : RSI comme sur la courbe
+
+- Le RSI de la météo se calcule sur les 20 derniers jours (14 jours de bourse), comme sur la
+  courbe d'Orbis, et plus sur 14 jours de calendrier week-ends compris (environ 10 jours de
+  bourse) : la météo et la courbe donnent la même valeur.
+
 ## 15/11/2026 — Alerte de cours propre à chaque téléphone
 
 - Chaque téléphone a sa propre alerte (seuils, variation sur 24 h) et son propre canal ntfy : les
