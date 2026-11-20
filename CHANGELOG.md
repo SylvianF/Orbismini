@@ -1,5 +1,10 @@
 # Historique
 
+## 20/11/2026 — Ticket : où trouver le code de jumelage
+
+- L'écran Ticket indique où lire le code à 2 chiffres sur le PC : Orbis, Charges → « Téléphones
+  des tickets » → « Relier un téléphone ».
+
 ## 20/11/2026 — Ticket de carburant envoyé depuis la pompe
 
 - Onglet « Ticket » : agence (Nancy, Troyes, Calais ; la dernière est retenue), photo du ticket

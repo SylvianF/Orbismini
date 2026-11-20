@@ -261,7 +261,7 @@
     if (!r.ok)
       throw Error(
         data.error === 'code'
-          ? 'Code refusé. Ouvre le panneau du téléphone dans Orbis sur ce PC et tape le code affiché.'
+          ? 'Code refusé. Sur le PC, dans Orbis : Charges → « Téléphones des tickets » → « Relier un téléphone », puis tape le code affiché.'
           : data.error === 'tickets' || r.status === 403
             ? 'Ce PC n’a pas encore la mise à jour des tickets.'
             : data.error || 'Jumelage impossible (' + r.status + ')'
@@ -460,7 +460,7 @@
       pairMsg.textContent = 'Recherche…';
       const found = await peers().catch(() => []);
       pairMsg.textContent = found.length
-        ? 'Sur le PC, ouvre le panneau du téléphone dans Orbis pour voir le code à 2 chiffres.'
+        ? 'Sur le PC, dans Orbis : Charges → « Téléphones des tickets » → « Relier un téléphone ». Tape ici le code à 2 chiffres affiché.'
         : 'Aucun PC sur ce réseau : connecte-toi au Wi-Fi du magasin, PC allumé.';
       pairList.replaceChildren(
         ...found.map(peer => {
