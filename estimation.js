@@ -691,7 +691,7 @@
       netManual: null,
       coinWeight: '',
       purity: '',
-      coinName: '', // Pièce Divers : désignation (tapée ou remplie par le scanner de pièces)
+      coinName: '', // Pièce Divers : désignation tapée
     };
   }
   function textInput(field, value, label) {
@@ -1132,18 +1132,7 @@
     )
       onFieldChange(e);
   });
-  root.addEventListener('focusin', e => {
-    if (e.target.matches('input[inputmode="decimal"]')) e.target.select();
-  });
   window.GoldEstimate = {
-    // Une ligne vide est prête à la saisie dès l'ouverture : plus de bouton « Commencer ».
-    ensureLine: () => {
-      if (lines.length) return;
-      const line = newLine();
-      lines.push(line);
-      openLine = line.id;
-      render();
-    },
     snapshot: () =>
       lines
         .filter(l => l.product)
