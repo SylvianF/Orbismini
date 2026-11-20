@@ -10,7 +10,9 @@ l’or et répondre en déplacement à « combien vous rachetez ce produit ? ».
 Render (`render.yaml`) à partir du dépôt GitHub. Aucune donnée client n’est stockée sur le
 serveur.
 
-## Trois onglets
+## Barre du bas
+
+Cinq onglets et un bouton, dans cet ordre : Cours, Météo, Orbiscan, Pièces, Rachat, Ticket.
 
 - **Cours** : recherche, favoris (appui long sur un produit), or pur 1 kg avec sa variation
   et son graphique, pièces et lingots CPoR, argent. Sous chaque
@@ -18,8 +20,15 @@ serveur.
   7,5 % par défaut, 4 % sur le lingot 1 kg, puis TMP 11,5 %). Toucher un produit ouvre le détail (frais, TMP/TPV).
 - **Météo** : météo de l’or, résumé des indices de tendance (pas une prévision, voir
   CHANGELOG). Dollar et euro y sont de simples repères, comme dans GoldGestion. Sources : BullionVault et Yahoo Finance (dollar, euro, taux, VIX).
+- **Orbiscan** (bouton, pas un onglet) : ouvre par-dessus l’écran la page Orbiscan du PC du
+  magasin ; les photos partent chiffrées depuis le téléphone. Ne marche qu’avec un PC relié.
+- **Pièces** : poids et titre d’une pièce peu courante, comme le scanner de pièces d’Orbis :
+  photo (Claude) ou recherche guidée (mots, pays, année), fiche Numista et prix d’achat indicatif.
 - **Rachat** : estimation client multi-lignes et impression, achat bijoux (9K à 22K),
   prix rapide d’une pièce d’or.
+- **Ticket** : ticket de frais (carburant, péage, restaurant, parking) pris en photo, recadré,
+  scellé et signé sur le téléphone pour les PC jumelés ; Orbis le range dans « <Agence> - Orbis
+  range ». Sans réseau, il attend sur le téléphone et part dès le retour du réseau.
 
 Mise en page reprise de GoldGestion. L’application est pensée pour l’iPhone
 uniquement.
