@@ -1,5 +1,14 @@
 # Historique
 
+## 20/11/2026 — Ménage du code (suite)
+
+- Rien ne change à l’écran.
+- estimation.js : restes de la copie d’Orbis retirés (ensureLine jamais appelée, présélection
+  des montants en double avec edit-fields.js, commentaire du scanner).
+- pc.json et alertes.json : lecture et écriture sur GitHub écrites une seule fois
+  (orbiscan_pc.py), mêmes messages et mêmes fichiers qu’avant.
+- README : barre du bas décrite telle qu’elle est (cinq onglets et Orbiscan).
+
 ## 20/11/2026 — Ménage du code
 
 - Rien ne change à l’écran.
