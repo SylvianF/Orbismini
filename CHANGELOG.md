@@ -1,5 +1,11 @@
 # Historique
 
+## 20/11/2026 — Ticket : carte d'échelle mieux reconnue
+
+- scan-feuille.js repris d'Orbis (1f60bb0) : seuil propre à la carte d'échelle (carrés imprimés
+  gris foncé sur les vraies photos) et carrés de même taille ; les 4 carrés sont reconnus, la
+  perspective corrigée.
+
 ## 20/11/2026 — Ticket : type de dépense et carte d'échelle
 
 - Type du ticket à choisir comme l'agence (retenu d'une fois sur l'autre) : carburant, péage,

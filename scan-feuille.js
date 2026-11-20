@@ -201,8 +201,10 @@
   }
 
   // Image réduite, niveaux de gris, seuil, et carrés noirs repérés (carrés, pleins, petits,
-  // entourés de papier clair). Commun à la carte et au papier à carreaux.
-  function scan(img) {
+  // entourés de papier clair). « level » : part du seuil sous laquelle un point est foncé ;
+  // 1 pour la carte (carrés imprimés, souvent gris foncé sur la photo : 110 pour un papier
+  // à 230, le 20/11/2026), 0,55 pour les cases noircies au feutre du papier à carreaux.
+  function scan(img, level = 0.55) {
     const W = img.naturalWidth || img.width,
       H = img.naturalHeight || img.height;
     const k = Math.min(1, 1400 / Math.max(W, H));
@@ -220,7 +222,7 @@
     }
     const cut = otsu(gray);
     const dark = new Uint8Array(w * h);
-    for (let j = 0; j < gray.length; j++) dark[j] = gray[j] < cut * 0.55 ? 1 : 0;
+    for (let j = 0; j < gray.length; j++) dark[j] = gray[j] < cut * level ? 1 : 0;
     const big = Math.max(w, h);
     // Cases noires : carrées, pleines, petites, entourées de papier clair.
     const marks = [];
@@ -424,7 +426,9 @@
       if (Math.abs(long - ratio) > 0.08 * ratio) return null; // photo prise à peu près d'en haut
       const short = Math.min(top + bottom, left + right) / 2;
       const real = pts.filter(p => !p.ghost);
-      const size = real.reduce((s, p) => s + p.size, 0) / real.length;
+      const sizes = real.map(p => p.size);
+      if (Math.max(...sizes) > Math.min(...sizes) * 1.35) return null; // carrés de même taille
+      const size = sizes.reduce((s, v) => s + v, 0) / sizes.length;
       // Carré de 8 mm pour 120 mm de petit côté : écarte une carte faite à la main.
       if (Math.abs(size / short - CARD.square / CARD.h) > 0.25 * (CARD.square / CARD.h)) return null;
       return { corners: q, landscape: r >= 1, score: Math.abs(long - ratio) };
@@ -546,10 +550,11 @@
   // échelle lisible (carte faite à la main) : photo entière, plutôt qu'une feuille prise
   // à tort pour une A4.
   function canvasOf(img, max) {
-    const s = scan(img);
-    const found = cardCorners(s.marks);
-    const onCard = found && a4OnCard(img, s, found, max);
+    const printed = scan(img, 1);
+    const found = cardCorners(printed.marks);
+    const onCard = found && a4OnCard(img, printed, found, max);
     if (onCard) return onCard;
+    const s = scan(img);
     const g = grid(img, s);
     if (g) return a4OnGrid(img, g, max);
     const W = img.naturalWidth || img.width,
