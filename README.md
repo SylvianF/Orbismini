@@ -58,9 +58,22 @@ Cours et courbe sur l’écran d’accueil grâce à l’app Scriptable : script
 - `cours-plus.js` : recherche, favoris, prix qui clignotent, alerte cours périmés,
   écran d’ouverture.
 - Calculs repris de l’ancienne GoldApp : `estimation.js` + `estimation.css`, `alignment.js`,
-  `fiscal.js`, `mobile.js` (onglets, achat bijoux), `quick-prices.js`, `print.js`.
-- Serveur : `server.py` et `kitco.py`, `cpor.py`, `bullionvault*.py`, `market.py`.
-- `icon.svg`, `icon.png`, `favicon.ico` : icône d’Orbismini, tirée du logo d’Orbis.
+  `fiscal.js`, `mobile.js` (onglets, achat bijoux), `quick-prices.js`, `print.js` + `print.css`.
+- `edit-fields.js` : montants et pourcentages présélectionnés au premier toucher.
+- `update.js` : annonce « Une nouvelle version est disponible » (quand `VERSION` de `sw.js` change).
+- Onglet Pièces : `scan.js` (page) et `pieces_scan.py` (Numista et Claude, repris du scanner
+  de pièces d’Orbis).
+- Tickets de frais : `ticket.js` (photo, scellé et signé sur le téléphone), `scan-feuille.js`
+  (recadrage sur la feuille A4 ou la carte d’échelle, repris tel quel d’Orbis) et
+  `tickets_boite.py` (boîte aux lettres entre le téléphone et les PC).
+- Orbiscan : `orbiscan-cadre.js` (bouton de la barre du bas), `orbiscan-shim.js` (photos
+  chiffrées sur le téléphone), `orbiscan_tunnel.py` (passage vers le relais du PC) et
+  `orbiscan_pc.py` (PC retenus, gardés sur GitHub).
+- Serveur : `server.py` et `kitco.py`, `cpor.py`, `bullionvault.py` (cours de secours),
+  `bullionvault_history.py` (graphiques), `market.py`.
+- `icon.svg`, `icon.png`, `favicon.ico` : icône d’Orbismini, tirée du logo d’Orbis ;
+  `manifest.webmanifest` : nom et icône sur l’écran d’accueil ; `logo-cndo.png` : logo des
+  estimations imprimées.
 - `img/cpor/` (or) et `img/argent/` (argent, d’après Gold.fr) : vignettes des produits.
 - `docs/historique/` : anciennes notes de version (non publiées).
 
