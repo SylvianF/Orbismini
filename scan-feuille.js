@@ -311,14 +311,15 @@
   // Hors du papier (bureau, sol, ombre) : blanc. Le papier, ce sont les grandes zones
   // claires (feuille, ticket : l'ombre du ticket peut couper la feuille en deux) ; on efface
   // depuis les bords tout ce qui n'en fait pas partie.
-  function whiten(out, cut) {
+  // « isLight » : ce qui compte comme papier (par défaut : plus clair que le seuil).
+  function whiten(out, cut, isLight = (r, g, b) => 0.299 * r + 0.587 * g + 0.114 * b > cut) {
     const ctx = out.getContext('2d', { willReadFrequently: true });
     const d = ctx.getImageData(0, 0, out.width, out.height),
       q = d.data,
       ow = out.width,
       oh = out.height;
     const light = new Uint8Array(ow * oh);
-    for (let j = 0; j < light.length; j++) light[j] = 0.299 * q[j * 4] + 0.587 * q[j * 4 + 1] + 0.114 * q[j * 4 + 2] > cut ? 1 : 0;
+    for (let j = 0; j < light.length; j++) light[j] = isLight(q[j * 4], q[j * 4 + 1], q[j * 4 + 2]) ? 1 : 0;
     const paper = new Uint8Array(ow * oh);
     const zones = blobs(light, ow, oh),
       largest = Math.max(0, ...zones.map(b => b.count));
@@ -536,10 +537,25 @@
     ctx.fillStyle = '#fff';
     const half = (CARD.square / 2 + 2) * perMm;
     for (const [X, Y] of square) ctx.fillRect(ow / 2 + X * perMm - half, oh / 2 + Y * perMm - half, 2 * half, 2 * half);
-    whiten(out, s.cut);
+    // Carte imprimée sur papier de couleur : couleur de la carte relevée entre les carrés ;
+    // seul le blanc peu coloré (le ticket) est gardé : carte, inscriptions, bureau et ombres
+    // effacés.
+    const sat = (r, g, b) => Math.max(r, g, b) - Math.min(r, g, b);
+    const probe = ctx.getImageData(0, 0, ow, oh).data;
+    const tints = [];
+    for (const [X, Y] of square) {
+      const u = Math.round(ow / 2 + X * perMm * 0.8),
+        v = Math.round(oh / 2 + Y * perMm * 0.8),
+        i = (v * ow + u) * 4;
+      if (u >= 0 && v >= 0 && u < ow && v < oh) tints.push(sat(probe[i], probe[i + 1], probe[i + 2]));
+    }
+    const tint = tints.sort((a, b) => a - b)[Math.floor(tints.length / 2)] || 0;
+    if (tint > 60) whiten(out, s.cut, (r, g, b) => sat(r, g, b) < tint * 0.4 && 0.299 * r + 0.587 * g + 0.114 * b > s.cut);
+    else whiten(out, s.cut);
     out.sheet = true;
     out.card = {
       count: found.count,
+      tint,
       pxPerMm: Math.hypot(corners[1][0] - corners[0][0], corners[1][1] - corners[0][1]) / (2 * hw),
     };
     return out;

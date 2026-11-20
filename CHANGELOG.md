@@ -1,5 +1,11 @@
 # Historique
 
+## 20/11/2026 — Ticket : carte d'échelle sur papier de couleur
+
+- scan-feuille.js repris d'Orbis (563d4b9) : carte imprimée sur papier coloré (vert) : seul le
+  ticket (blanc et noir) est gardé, carte, inscriptions, bureau et ombres effacés, comme un scan.
+  Sur carte blanche, rien ne change.
+
 ## 20/11/2026 — Ticket : carte d'échelle mieux reconnue
 
 - scan-feuille.js repris d'Orbis (1f60bb0) : seuil propre à la carte d'échelle (carrés imprimés
