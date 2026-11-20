@@ -1,5 +1,11 @@
 # Historique
 
+## 20/11/2026 — Plus de vide à faire défiler sur les écrans courts
+
+- La page fait au moins la hauteur de l'écran, sans plus (avant : chaque onglet faisait la hauteur
+  de l'écran en plus du haut de page, d'où un vide à faire défiler sur Scan, Météo…). La barre du
+  bas ne remonte toujours pas.
+
 ## 20/11/2026 — Chiffres : Mois, Mois préc. et Année comme le tableau « Exercice comptable »
 
 - Avec les chiffres de l'exercice d'Orbis (source « exercice ») : « Achats HT », « CA HT » (envois
