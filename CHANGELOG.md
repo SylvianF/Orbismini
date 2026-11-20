@@ -1,5 +1,21 @@
 # Historique
 
+## 20/11/2026 — Ticket de carburant envoyé depuis la pompe
+
+- Onglet « Ticket » : agence (Nancy, Troyes, Calais ; la dernière est retenue), photo du ticket
+  posé sur une feuille A4 (recadrée sur la feuille par scan-feuille.js, repris d'Orbis, puis remise
+  au propre en noir et blanc comme dans Orbis), montant, « Envoyer ». Marche partout, réseau mobile
+  compris ; Orbis range le ticket tout seul dans « <Agence> - Orbis range ».
+- Sécurité : photo, agence, montant et jour scellés ensemble sur le téléphone pour chaque PC
+  jumelé (sa clé publique) et signés avec un secret propre au téléphone et à ce PC (jumelage une
+  fois par PC, au magasin, avec le code à 2 chiffres affiché sur le PC). Orbismini
+  (tickets_boite.py) ne garde qu'un paquet illisible, en mémoire, effacé dès qu'Orbis l'a rangé ;
+  30 tickets par jour et par téléphone ; « Délier » un PC depuis le téléphone.
+- Le ticket scellé reste sur le téléphone jusqu'à « Rangé ✓ » et repart tout seul si Orbismini
+  l'a perdu (redémarrage). Le relais du PC est prévenu par sa ligne déjà ouverte ; il ne prend un
+  ticket que si Orbis tourne sur ce PC, sinon l'autre PC le prend (réservation de 10 minutes).
+- Il faut la mise à jour des relais (orbiscan_tickets.py) pour jumeler un PC.
+
 ## 20/11/2026 — Proposition de rachat : modifications d'Orbis reprises
 
 - Nom « Proposition de rachat » (au lieu d'« Estimation client »).

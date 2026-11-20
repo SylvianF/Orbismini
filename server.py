@@ -583,6 +583,35 @@ class Handler(SimpleHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(body)
 
+    def tickets(self, method):
+        """Tickets de carburant du téléphone (ticket.js, tickets_boite.py) : vrai si traité ici."""
+        path = urlparse(self.path).path
+        if path not in ("/api/tickets", "/api/tickets/etat"):
+            return False
+        if not self.guard(path):
+            return True
+        import base64
+        import alerte_appareils as AA
+        import orbiscan_tunnel as T
+
+        try:
+            if path == "/api/tickets" and method == "POST":
+                data = json.loads(self.read_limited(40 * 1024 * 1024) or b"{}")
+                packets = {str(pc): base64.b64decode(str(blob), validate=True)
+                           for pc, blob in (data.get("packets") or {}).items()}
+                state = T.TUNNEL.mail.post(AA.device_id(self.headers.get("X-Appareil")), data.get("id"), packets)
+                self.send_json({"id": data.get("id"), "state": state})
+            elif path == "/api/tickets/etat" and method == "GET":
+                ids = (parse_qs(urlparse(self.path).query).get("ids") or [""])[0].split(",")[:50]
+                self.send_json({"states": T.TUNNEL.mail.states(ids)})
+            else:
+                self.send_error(405)
+        except PermissionError as error:
+            self.send_json({"error": str(error)}, 429)
+        except (ValueError, TypeError, AttributeError):
+            self.send_json({"error": "ticket invalide"}, 400)
+        return True
+
     def orbiscan(self, method):
         """Orbiscan dans Orbismini (orbiscan_tunnel.py) : vrai si la requête est traitée ici."""
         path = urlparse(self.path).path
@@ -611,9 +640,29 @@ class Handler(SimpleHTTPRequestHandler):
                     # PC retenu à sa première venue (GitHub) : ni autre secret, ni autre clé ensuite.
                     T.validate(data.get("pc"), data.get("key") or {}, data.get("secret"))
                     orbiscan_pc.STORE.check(data.get("pc"), data.get("name"), data.get("secret"), data.get("key"))
-                    out = T.TUNNEL.relay_wait(data.get("pc"), data.get("name"), data.get("key") or {},
-                                              data.get("secret"), self.client_ip())
-                    self.send_json({"requests": out})
+                    pc, mail = data.get("pc"), T.TUNNEL.mail
+                    # Relais qui sait relever les tickets de carburant : réveillé aussi pour eux.
+                    wake = (lambda: bool(mail.waiting(pc))) if data.get("tickets") else None
+                    out = T.TUNNEL.relay_wait(pc, data.get("name"), data.get("key") or {},
+                                              data.get("secret"), self.client_ip(), wake=wake)
+                    reply = {"requests": out}
+                    if wake:
+                        with T.TUNNEL.lock:
+                            reply["tickets"] = mail.waiting(pc, mark=True)
+                    self.send_json(reply)
+                elif path in ("/api/orbiscan/relais/ticket", "/api/orbiscan/relais/ticket-range"):
+                    # Ticket de carburant : réservé par ce relais (paquet scellé pour lui), ou rangé par Orbis.
+                    pc = data.get("pc")
+                    if not T.TUNNEL.authentic(pc, data.get("secret")):
+                        raise PermissionError("relais inconnu")
+                    try:
+                        if path.endswith("/ticket"):
+                            blob = T.TUNNEL.mail.lease(pc, data.get("id"))
+                            self.send_json({"id": data.get("id"), "blob": base64.b64encode(blob).decode()})
+                        else:
+                            self.send_json({"ok": T.TUNNEL.mail.filed(pc, data.get("id"))})
+                    except LookupError as error:
+                        self.send_json({"error": str(error)}, 404)
                 elif path == "/api/orbiscan/relais/reponse":
                     T.TUNNEL.relay_answer(data.get("pc"), data.get("secret"), data.get("id"),
                                           int(data.get("status") or 500), data.get("type"),
@@ -675,7 +724,7 @@ class Handler(SimpleHTTPRequestHandler):
         return True
 
     def do_POST(self):
-        if self.orbiscan("POST"):
+        if self.tickets("POST") or self.orbiscan("POST"):
             return
         if urlparse(self.path).path == "/api/scan/identify":
             # Scanner de pièces : photos (JPEG en base64) → pièces possibles (pieces_scan.py).
@@ -757,7 +806,7 @@ class Handler(SimpleHTTPRequestHandler):
         return super().do_HEAD()
 
     def do_GET(self):
-        if self.orbiscan("GET"):
+        if self.tickets("GET") or self.orbiscan("GET"):
             return
         url = urlparse(self.path)
         if url.path == "/logout":

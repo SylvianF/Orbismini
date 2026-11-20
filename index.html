@@ -12,9 +12,9 @@
     <link rel="icon" type="image/svg+xml" href="icon.svg" />
     <link rel="apple-touch-icon" href="icon.png" />
     <title>Orbismini</title>
-    <link rel="stylesheet" href="style.css?v=20261120-proposition-orbis" />
-    <link rel="stylesheet" href="estimation.css?v=20261120-proposition-orbis" />
-    <link rel="stylesheet" href="print.css?v=20261120-proposition-orbis" />
+    <link rel="stylesheet" href="style.css?v=20261120-ticket-carburant" />
+    <link rel="stylesheet" href="estimation.css?v=20261120-ticket-carburant" />
+    <link rel="stylesheet" href="print.css?v=20261120-ticket-carburant" />
   </head>
   <body data-view="cours">
     <div id="pull-indicator" aria-hidden="true">
@@ -83,6 +83,12 @@
             <rect x="5" y="3" width="14" height="18" rx="2" />
             <path d="M8 7h8M8 11h1M12 11h1M16 11h.1M8 15h1M12 15h1M16 15h.1M8 18h1M12 18h1M16 18h.1" /></svg
           >Rachat
+        </button>
+        <button type="button" data-view="ticket" aria-pressed="false">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M4 21V5a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v16M3 21h12M6 9h6" />
+            <path d="M14 11h2a1.5 1.5 0 0 1 1.5 1.5v4a1.5 1.5 0 0 0 3 0V8l-3-3" /></svg
+          >Ticket
         </button>
       </nav>
 
@@ -185,6 +191,9 @@
         <section class="section ga" id="gold-alert" aria-label="Alerte de cours" hidden></section>
       </div>
 
+      <!-- Ticket de carburant : photo, agence, montant, envoyé chiffré aux PC (ticket.js). -->
+      <div id="view-ticket" class="view" hidden></div>
+
       <!-- Rachat : tous les calculs. estimation.js ajoute l’estimation client en tête. -->
       <div id="view-rachat" class="view" hidden>
         <section class="section hero">
@@ -277,23 +286,25 @@
         </details>
       </section>
     </main>
-    <script src="fiscal.js?v=20261120-proposition-orbis"></script>
-    <script src="freshness.js?v=20261120-proposition-orbis"></script>
-    <script src="gold-chart.js?v=20261120-proposition-orbis"></script>
-    <script src="app.js?v=20261120-proposition-orbis"></script>
-    <script src="estimation.js?v=20261120-proposition-orbis"></script>
-    <script src="silver.js?v=20261120-proposition-orbis"></script>
-    <script src="cours-plus.js?v=20261120-proposition-orbis"></script>
-    <script src="meteo.js?v=20261120-proposition-orbis"></script>
-    <script src="alerte-cours.js?v=20261120-proposition-orbis"></script>
-    <script src="orbiscan-cadre.js?v=20261120-proposition-orbis"></script>
-    <script src="scan.js?v=20261120-proposition-orbis"></script>
-    <script src="c3e.js?v=20261120-proposition-orbis"></script>
-    <script src="mobile.js?v=20261120-proposition-orbis"></script>
-    <script src="alignment.js?v=20261120-proposition-orbis"></script>
-    <script src="quick-prices.js?v=20261120-proposition-orbis"></script>
-    <script src="print.js?v=20261120-proposition-orbis"></script>
-    <script src="edit-fields.js?v=20261120-proposition-orbis"></script>
-    <script src="update.js?v=20261120-proposition-orbis"></script>
+    <script src="fiscal.js?v=20261120-ticket-carburant"></script>
+    <script src="freshness.js?v=20261120-ticket-carburant"></script>
+    <script src="gold-chart.js?v=20261120-ticket-carburant"></script>
+    <script src="app.js?v=20261120-ticket-carburant"></script>
+    <script src="estimation.js?v=20261120-ticket-carburant"></script>
+    <script src="silver.js?v=20261120-ticket-carburant"></script>
+    <script src="cours-plus.js?v=20261120-ticket-carburant"></script>
+    <script src="meteo.js?v=20261120-ticket-carburant"></script>
+    <script src="alerte-cours.js?v=20261120-ticket-carburant"></script>
+    <script src="orbiscan-cadre.js?v=20261120-ticket-carburant"></script>
+    <script src="scan.js?v=20261120-ticket-carburant"></script>
+    <script src="c3e.js?v=20261120-ticket-carburant"></script>
+    <script src="mobile.js?v=20261120-ticket-carburant"></script>
+    <script src="alignment.js?v=20261120-ticket-carburant"></script>
+    <script src="quick-prices.js?v=20261120-ticket-carburant"></script>
+    <script src="print.js?v=20261120-ticket-carburant"></script>
+    <script src="edit-fields.js?v=20261120-ticket-carburant"></script>
+    <script src="scan-feuille.js?v=20261120-ticket-carburant"></script>
+    <script src="ticket.js?v=20261120-ticket-carburant"></script>
+    <script src="update.js?v=20261120-ticket-carburant"></script>
   </body>
 </html>

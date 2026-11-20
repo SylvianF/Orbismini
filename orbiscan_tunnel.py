@@ -49,8 +49,10 @@ ALLOWED = [
     ("POST", re.compile(r"/api/pair/%s" % TOKEN)),
     ("POST", re.compile(r"/api/upload/%s/(recto|verso|rib|face|revers|facture)" % TOKEN)),
     ("POST", re.compile(r"/api/done/%s" % TOKEN)),
+    # Tickets de carburant : jumelage du téléphone avec ce PC et déliaison (scellés, ticket.js).
+    ("POST", re.compile(r"/api/ticket/(pair|unlink)")),
 ]
-UPLOAD = re.compile(r"/api/upload/")
+UPLOAD = re.compile(r"/api/(upload|ticket)/")      # toujours scellés sur le téléphone
 
 
 def allowed(method, path):
@@ -87,8 +89,11 @@ def validate(pc, key, secret):
 
 class Tunnel:
     def __init__(self, clock=time.monotonic):
+        import tickets_boite
+
         self.clock = clock
         self.lock = threading.Condition()
+        self.mail = tickets_boite.Mailbox(self.lock)   # tickets de carburant (même ligne ouverte)
         self.pcs = {}        # id → {name, key, secret, ip, seen, queue}
         self.calls = {}      # numéro → {pc, method, path, ctype, body, at, answer}
 
@@ -107,8 +112,9 @@ class Tunnel:
         return self.clock() - x["seen"] < PC_TTL or x["waiting"]
 
     # ---------------------------------------------------------------- relais du PC
-    def relay_wait(self, pc, name, key, secret, ip, wait=RELAY_WAIT):
-        """Ligne ouverte du relais : rend les demandes du téléphone dès qu'il y en a."""
+    def relay_wait(self, pc, name, key, secret, ip, wait=RELAY_WAIT, wake=None):
+        """Ligne ouverte du relais : rend les demandes du téléphone dès qu'il y en a.
+        wake (sous le verrou) : autre raison de répondre tout de suite (tickets à relever)."""
         validate(pc, key, secret)
         digest = hashlib.sha256(str(secret).encode()).hexdigest()
         with self.lock:
@@ -124,7 +130,8 @@ class Tunnel:
             x["waiting"] += 1
             try:
                 end = self.clock() + wait
-                while not x["queue"] and self.clock() < end and self.pcs.get(pc) is x:
+                while (not x["queue"] and not (wake and wake()) and self.clock() < end
+                       and self.pcs.get(pc) is x):
                     self.lock.wait(min(1.0, max(0.0, end - self.clock())))
                 out = []
                 while x["queue"]:
@@ -139,6 +146,13 @@ class Tunnel:
             finally:
                 x["waiting"] -= 1
                 x["seen"] = self.clock()
+
+    def authentic(self, pc, secret):
+        """Vrai si ce relais est bien celui du PC (même secret que sur sa ligne ouverte)."""
+        digest = hashlib.sha256(str(secret).encode()).hexdigest()
+        with self.lock:
+            x = self.pcs.get(pc)
+            return bool(x) and hmac.compare_digest(x["secret"], digest)
 
     def relay_answer(self, pc, secret, rid, status, ctype, body):
         digest = hashlib.sha256(str(secret).encode()).hexdigest()
