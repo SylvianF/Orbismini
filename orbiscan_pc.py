@@ -55,6 +55,49 @@ def http(method, url, token, body=None):
             return e.code, {}
 
 
+# ---------------------------------------------------------------- fichier JSON sur une branche
+# Commun à pc.json (branche « orbiscan-pc ») et à alertes.json (branche « alertes »,
+# alerte_appareils.py) : Render ne déploie que main, rien ne redémarre quand ils changent.
+def _url(path):
+    return f"{API}/repos/{REPO}/{path}"
+
+
+def read_file(token, branch, file):
+    """(statut, contenu, version) : contenu {} et version None si le fichier n'existe pas encore
+    (404) ; contenu None pour toute autre réponse de GitHub."""
+    status, out = http("GET", _url(f"contents/{file}?ref={branch}"), token)
+    if status == 200:
+        return status, json.loads(base64.b64decode(out["content"])), out["sha"]
+    if status == 404:
+        return status, {}, None
+    return status, None, None
+
+
+def ensure_branch(token, branch):
+    """Crée la branche à partir de main si elle n'existe pas encore."""
+    status, _ = http("GET", _url(f"git/ref/heads/{branch}"), token)
+    if status == 200:
+        return
+    status, main = http("GET", _url("git/ref/heads/main"), token)
+    if status != 200:
+        raise PermissionError("dépôt inaccessible (GitHub %s)" % status)
+    status, _ = http("POST", _url("git/refs"), token, {"ref": "refs/heads/" + branch, "sha": main["object"]["sha"]})
+    if status not in (201, 422):     # 422 : créée entre-temps
+        raise PermissionError("branche impossible à créer (GitHub %s)" % status)
+
+
+def write_file(token, branch, file, sha, text, message):
+    """Écrit le texte (JSON) sur la branche, créée à la première écriture : (statut, nouvelle
+    version) ; version None si GitHub refuse (conflit, panne…)."""
+    if sha is None:
+        ensure_branch(token, branch)
+    body = {"message": message, "branch": branch, "content": base64.b64encode(text.encode()).decode()}
+    if sha:
+        body["sha"] = sha
+    status, out = http("PUT", _url(f"contents/{file}"), token, body)
+    return status, (out["content"]["sha"] if status in (200, 201) else None)
+
+
 class Store:
     def __init__(self, token=None, admin=None):
         self.token = os.environ.get("ORBISCAN_GITHUB_TOKEN", "").strip() if token is None else token
@@ -69,39 +112,17 @@ class Store:
             return
         if not self.token:
             raise PermissionError("Orbismini ne peut pas retenir les PC (ORBISCAN_GITHUB_TOKEN absent)")
-        status, out = http("GET", f"{API}/repos/{REPO}/contents/{FILE}?ref={BRANCH}", self.token)
-        if status == 200:
-            self.pcs = json.loads(base64.b64decode(out["content"]))
-            self.sha = out["sha"]
-        elif status == 404:
-            self.pcs, self.sha = {}, None
-        else:
+        status, pcs, sha = read_file(self.token, BRANCH, FILE)
+        if pcs is None:
             raise PermissionError("liste des PC illisible pour l'instant (GitHub %s)" % status)
-
-    def _branch(self):
-        status, _ = http("GET", f"{API}/repos/{REPO}/git/ref/heads/{BRANCH}", self.token)
-        if status == 200:
-            return
-        status, main = http("GET", f"{API}/repos/{REPO}/git/ref/heads/main", self.token)
-        if status != 200:
-            raise PermissionError("dépôt inaccessible (GitHub %s)" % status)
-        status, _ = http("POST", f"{API}/repos/{REPO}/git/refs", self.token,
-                         {"ref": "refs/heads/" + BRANCH, "sha": main["object"]["sha"]})
-        if status not in (201, 422):     # 422 : créée entre-temps
-            raise PermissionError("branche impossible à créer (GitHub %s)" % status)
+        self.pcs, self.sha = pcs, sha
 
     def _save(self, pcs, message):
-        if self.sha is None:
-            self._branch()
-        body = {"message": message, "branch": BRANCH,
-                "content": base64.b64encode(json.dumps(pcs, indent=2, sort_keys=True).encode()).decode()}
-        if self.sha:
-            body["sha"] = self.sha
-        status, out = http("PUT", f"{API}/repos/{REPO}/contents/{FILE}", self.token, body)
-        if status not in (200, 201):
+        status, sha = write_file(self.token, BRANCH, FILE, self.sha, json.dumps(pcs, indent=2, sort_keys=True), message)
+        if sha is None:
             self.pcs = None              # relire au prochain passage (conflit, panne…)
             raise PermissionError("PC non enregistré (GitHub %s)" % status)
-        self.sha, self.pcs = out["content"]["sha"], pcs
+        self.sha, self.pcs = sha, pcs
 
     # ---------------------------------------------------------------- relais
     def check(self, pc, name, secret, key):

@@ -15,7 +15,6 @@ l’empreinte de l’identifiant de chaque téléphone (jamais l’identifiant),
 dernières alertes. Le canal ntfy n’y est pas : il est calculé à partir de l’empreinte et d’une clé
 tirée du mot de passe d’Orbismini (réglages de Render), donc introuvable depuis le dépôt."""
 
-import base64
 import hashlib
 import hmac
 import json
@@ -67,50 +66,26 @@ class Store:
         self.checked = 0.0
 
     # ---------------------------------------------------------------- GitHub
-    def _url(self, path):
-        return f"{orbiscan_pc.API}/repos/{orbiscan_pc.REPO}/{path}"
-
     def _load(self):
         if self.data is not None:
             return
         if not self.token:
             raise PermissionError("Alertes par téléphone indisponibles (ORBISCAN_GITHUB_TOKEN absent)")
-        status, out = orbiscan_pc.http("GET", self._url(f"contents/{FILE}?ref={BRANCH}"), self.token)
-        if status == 200:
-            data = json.loads(base64.b64decode(out["content"]))
-            self.sha = out["sha"]
-        elif status == 404:
-            data, self.sha = {}, None
-        else:
+        status, data, sha = orbiscan_pc.read_file(self.token, BRANCH, FILE)
+        if data is None:
             raise PermissionError("Alertes illisibles pour l’instant, réessaie dans une minute (GitHub %s)" % status)
+        self.sha = sha
         self.data = dict(devices=dict(data.get("devices") or {}), orbis=list(data.get("orbis") or []))
         # Alertes déjà connues au démarrage : pas renvoyées.
         self.sent.update(h["id"] for d in self.data["devices"].values() for h in d["state"].get("hits") or [])
 
-    def _branch(self):
-        status, _ = orbiscan_pc.http("GET", self._url(f"git/ref/heads/{BRANCH}"), self.token)
-        if status == 200:
-            return
-        status, main = orbiscan_pc.http("GET", self._url("git/ref/heads/main"), self.token)
-        if status != 200:
-            raise PermissionError("dépôt inaccessible (GitHub %s)" % status)
-        status, _ = orbiscan_pc.http("POST", self._url("git/refs"), self.token,
-                                     {"ref": "refs/heads/" + BRANCH, "sha": main["object"]["sha"]})
-        if status not in (201, 422):
-            raise PermissionError("branche impossible à créer (GitHub %s)" % status)
-
     def _save(self, data, message):
-        if self.sha is None:
-            self._branch()
-        body = {"message": message, "branch": BRANCH,
-                "content": base64.b64encode(json.dumps(data, indent=1, sort_keys=True, ensure_ascii=False).encode()).decode()}
-        if self.sha:
-            body["sha"] = self.sha
-        status, out = orbiscan_pc.http("PUT", self._url(f"contents/{FILE}"), self.token, body)
-        if status not in (200, 201):
+        text = json.dumps(data, indent=1, sort_keys=True, ensure_ascii=False)
+        status, sha = orbiscan_pc.write_file(self.token, BRANCH, FILE, self.sha, text, message)
+        if sha is None:
             self.data = None             # relire au prochain passage
             raise PermissionError("Alerte non enregistrée, réessaie dans une minute (GitHub %s)" % status)
-        self.sha, self.data = out["content"]["sha"], data
+        self.sha, self.data = sha, data
 
     def _copy(self):
         return json.loads(json.dumps(self.data))
