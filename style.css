@@ -175,11 +175,6 @@ summary {
   margin: 0 -2px 0 -3px;
   background: linear-gradient(to bottom, transparent, #c99a45 17%, #c99a45 81%, transparent);
 }
-.brand-mark {
-  display: flex;
-  align-items: center;
-  gap: 18px;
-}
 /* Écran d’ouverture : l’icône est au-dessus du nom, la barre devient horizontale entre les deux. */
 #splash .brand-bar {
   width: 73px;
@@ -560,9 +555,6 @@ summary {
 }
 
 /* Prix d’achat d’un produit */
-.back {
-  margin-bottom: 18px;
-}
 .buy-heading {
   display: flex;
   align-items: center;
