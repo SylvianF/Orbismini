@@ -1,5 +1,12 @@
 # Historique
 
+## 20/11/2026 — Annonce de mise à jour seulement pour une vraie nouvelle version
+
+- « Une nouvelle version est disponible » ne paraît que si la version en ligne diffère de celle
+  affichée sur le téléphone (vérifié à l'ouverture et à chaque retour dans l'application).
+  Avant, l'annonce pouvait paraître alors que la page était déjà la dernière (copie de secours du
+  téléphone renouvelée). Le bouton « Mettre à jour » reste : rien n'est mis à jour sans toi.
+
 ## 20/11/2026 — Météo de l'or : RSI comme sur la courbe
 
 - Le RSI de la météo se calcule sur les 20 derniers jours (14 jours de bourse), comme sur la
