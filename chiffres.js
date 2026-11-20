@@ -114,7 +114,7 @@
     return out;
   }
 
-  // Cadres par groupe, chacun avec sa période (Aujourd'hui… Année), retenue par cadre.
+  // Périodes envoyées par Orbis (Aujourd'hui… Année).
   const PERIODS = [
     ['today', 'Aujourd’hui'],
     ['yesterday', 'Hier'],
@@ -122,13 +122,7 @@
     ['previousMonth', 'Mois préc.'],
     ['year', 'Année'],
   ];
-  const GROUPS = [
-    ['achats', 'Achats'],
-    ['marge', 'Marge théorique'],
-    ['ventes', 'Ventes'],
-    ['margeReelle', 'Marge réelle'],
-  ];
-  const CHOICE = 'orbismini-chiffres-periodes';
+  const CHOICE = 'orbismini-chiffres-periode';
   const short = d => new Date(d + 'T12:00').toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' });
   const dayName = d => new Date(d + 'T12:00').toLocaleDateString('fr-FR', { weekday: 'long' });
   const monthName = d => {
@@ -145,42 +139,37 @@
     if (key === 'previousMonth') return monthName(p.start) + ' (' + plural(p.days || 0, 'jour') + ' travaillé' + ((p.days || 0) > 1 ? 's' : '') + ')';
     return (p.label || 'Année en cours') + ' (depuis le ' + short(p.start) + days + ')';
   }
+  // Un seul cadre : la période choisie en haut (retenue), toutes les lignes dessous.
   function cards(c) {
-    let choice = {};
-    try {
-      choice = JSON.parse(read(CHOICE) || '{}') || {};
-    } catch {}
     const periods = c.periods;
-    const has = g => PERIODS.some(([k]) => periods[k] && periods[k][g] != null);
-    return GROUPS.filter(([g]) => has(g)).map(([g, title]) => {
-      const key = PERIODS.some(([k]) => k === choice[g]) ? choice[g] : 'today';
-      const p = periods[key];
-      const buttons = el(
-        'div',
-        { className: 'ch-periods', role: 'group' },
-        ...PERIODS.map(([k, label]) =>
-          el('button', {
-            type: 'button',
-            textContent: label,
-            className: k === key ? 'chosen' : '',
-            onclick: () => {
-              choice[g] = k;
-              store(CHOICE, JSON.stringify(choice));
-              draw();
-            },
-          })
-        )
-      );
-      const body = p && p[g] != null ? rows(p, g) : [el('p', { className: 'small', textContent: p ? 'Rien pour cette période.' : '' })];
-      return el(
+    const saved = read(CHOICE);
+    const key = PERIODS.some(([k]) => k === saved) ? saved : 'today';
+    const p = periods[key];
+    const buttons = el(
+      'div',
+      { className: 'ch-periods', role: 'group' },
+      ...PERIODS.map(([k, label]) =>
+        el('button', {
+          type: 'button',
+          textContent: label,
+          className: k === key ? 'chosen' : '',
+          onclick: () => {
+            store(CHOICE, k);
+            draw();
+          },
+        })
+      )
+    );
+    const body = p ? rows(p) : [];
+    return [
+      el(
         'section',
-        { className: 'section ch-card' },
-        el('h3', { className: 'list-heading', textContent: title }),
+        { className: 'section' },
         buttons,
         el('p', { className: 'small ch-when', textContent: periodText(key, p) }),
-        ...body
-      );
-    });
+        ...(p && !body.length ? [el('p', { className: 'small', textContent: 'Rien pour cette période.' })] : body)
+      ),
+    ];
   }
 
   function draw() {
@@ -214,6 +203,7 @@
     );
     const day = c.day ? new Date(c.day + 'T12:00').toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' }) : '';
     view.replaceChildren(
+      ...[
       el(
         'section',
         { className: 'section' },
@@ -238,6 +228,7 @@
             ...rows(c.month)
           )
         : null
+      ].filter(Boolean)
     );
   }
 

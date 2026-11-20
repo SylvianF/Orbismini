@@ -1,5 +1,11 @@
 # Historique
 
+## 20/11/2026 — Chiffres : un seul cadre, la période en haut
+
+- Un seul cadre avec toutes les lignes (achats, marge théorique, ventes, marge réelle) et, au-dessus,
+  les boutons Aujourd'hui · Hier · Mois · Mois préc. · Année ; période choisie retenue.
+- Corrigé : « nullnull » affiché sous les chiffres.
+
 ## 20/11/2026 — Chiffres : une période par cadre
 
 - Avec un Orbis qui envoie les périodes (après la 3.1.21) : un cadre par groupe (Achats, Marge
