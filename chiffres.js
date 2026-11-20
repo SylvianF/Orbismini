@@ -91,8 +91,10 @@
     if (document.body.dataset.view === 'chiffres') draw();
   }
 
-  function rows(block) {
+  // Lignes d'un bloc de chiffres ; group : un seul groupe (achats, marge, ventes, margeReelle).
+  function rows(block, group) {
     const out = [];
+    if (group) block = { [group]: block[group] };
     const row = (label, value, cls = '') => out.push(el('div', { className: 'ch-row ' + cls }, el('span', { textContent: label }), el('b', { textContent: value })));
     if (block.achats) {
       const a = block.achats;
@@ -110,6 +112,75 @@
     if (block.margeReelle != null)
       row('Marge réelle', euro(block.margeReelle), 'ch-margin' + (Number(block.margeReelle) < 0 ? ' ch-neg' : ''));
     return out;
+  }
+
+  // Cadres par groupe, chacun avec sa période (Aujourd'hui… Année), retenue par cadre.
+  const PERIODS = [
+    ['today', 'Aujourd’hui'],
+    ['yesterday', 'Hier'],
+    ['month', 'Mois'],
+    ['previousMonth', 'Mois préc.'],
+    ['year', 'Année'],
+  ];
+  const GROUPS = [
+    ['achats', 'Achats'],
+    ['marge', 'Marge théorique'],
+    ['ventes', 'Ventes'],
+    ['margeReelle', 'Marge réelle'],
+  ];
+  const CHOICE = 'orbismini-chiffres-periodes';
+  const short = d => new Date(d + 'T12:00').toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' });
+  const dayName = d => new Date(d + 'T12:00').toLocaleDateString('fr-FR', { weekday: 'long' });
+  const monthName = d => {
+    const s = new Date(d + 'T12:00').toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
+    return s[0].toUpperCase() + s.slice(1);
+  };
+  const plural = (n, w) => n + ' ' + w + (n > 1 ? 's' : '');
+  function periodText(key, p) {
+    if (!p) return key === 'today' ? 'Aujourd’hui : clôture du jour pas encore lue.' : 'Hier : pas encore de chiffres.';
+    const days = p.days ? ', ' + plural(p.days, 'jour') + ' travaillé' + (p.days > 1 ? 's' : '') : '';
+    if (key === 'today') return 'Aujourd’hui, ' + dayName(p.start) + ' ' + short(p.start);
+    if (key === 'yesterday') return 'Hier, ' + dayName(p.start) + ' ' + short(p.start);
+    if (key === 'month') return monthName(p.start) + ' (du ' + short(p.start) + ' au ' + short(p.end) + days + ')';
+    if (key === 'previousMonth') return monthName(p.start) + ' (' + plural(p.days || 0, 'jour') + ' travaillé' + ((p.days || 0) > 1 ? 's' : '') + ')';
+    return (p.label || 'Année en cours') + ' (depuis le ' + short(p.start) + days + ')';
+  }
+  function cards(c) {
+    let choice = {};
+    try {
+      choice = JSON.parse(read(CHOICE) || '{}') || {};
+    } catch {}
+    const periods = c.periods;
+    const has = g => PERIODS.some(([k]) => periods[k] && periods[k][g] != null);
+    return GROUPS.filter(([g]) => has(g)).map(([g, title]) => {
+      const key = PERIODS.some(([k]) => k === choice[g]) ? choice[g] : 'today';
+      const p = periods[key];
+      const buttons = el(
+        'div',
+        { className: 'ch-periods', role: 'group' },
+        ...PERIODS.map(([k, label]) =>
+          el('button', {
+            type: 'button',
+            textContent: label,
+            className: k === key ? 'chosen' : '',
+            onclick: () => {
+              choice[g] = k;
+              store(CHOICE, JSON.stringify(choice));
+              draw();
+            },
+          })
+        )
+      );
+      const body = p && p[g] != null ? rows(p, g) : [el('p', { className: 'small', textContent: p ? 'Rien pour cette période.' : '' })];
+      return el(
+        'section',
+        { className: 'section ch-card' },
+        el('h3', { className: 'list-heading', textContent: title }),
+        buttons,
+        el('p', { className: 'small ch-when', textContent: periodText(key, p) }),
+        ...body
+      );
+    });
   }
 
   function draw() {
@@ -150,13 +221,16 @@
         cities.length > 1 ? pick : el('h2', { className: 'ch-city', textContent: city }),
         el('p', { className: 'small' + (age > 30 ? ' ch-old' : ''), textContent: (age > 30 ? '⚠ Pas mis à jour depuis plus de 30 minutes · ' : 'Mis à jour ') + 'le ' + when + (error ? ' · ' + error : '') })
       ),
-      el(
+      ...(c.periods ? cards(c) : []),
+      c.periods
+        ? null
+        : el(
         'section',
         { className: 'section' },
         el('h3', { className: 'list-heading', textContent: 'Aujourd’hui' + (day ? ' · ' + day : '') }),
         ...(c.today ? rows(c.today) : [el('p', { className: 'small', textContent: 'Clôture du jour pas encore lue.' })])
       ),
-      c.month
+      !c.periods && c.month
         ? el(
             'section',
             { className: 'section' },

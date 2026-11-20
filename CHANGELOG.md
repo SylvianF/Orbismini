@@ -1,5 +1,12 @@
 # Historique
 
+## 20/11/2026 — Chiffres : une période par cadre
+
+- Avec un Orbis qui envoie les périodes (après la 3.1.21) : un cadre par groupe (Achats, Marge
+  théorique, Ventes, Marge réelle), chacun avec ses boutons Aujourd'hui, Hier (dernier jour
+  travaillé), Mois, Mois précédent, Année (exercice de l'agence) ; dates de la période affichées ;
+  dernier bouton retenu par cadre. Avec un Orbis plus ancien : affichage d'avant (jour et mois).
+
 ## 20/11/2026 — Onglet « Scan » : 5 boutons en bas
 
 - Barre du bas : Cours · Météo · Scan · Rachat · Chiffres (Chiffres seulement pour les téléphones
