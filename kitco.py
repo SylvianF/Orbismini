@@ -7,24 +7,6 @@ from urllib.request import Request, urlopen
 from urllib.parse import urlencode
 
 URL = "https://api.kitco.com/adaptor-mobile/v1/precious"
-# Marché Kitco (heure de New York) : fermé du vendredi 17 h au dimanche 18 h,
-# et chaque jour de semaine de 17 h à 18 h.
-CLOSE_HOUR, OPEN_HOUR = 17, 18
-
-
-def last_close(now_ny):
-    """Heure de la dernière clôture si le marché est fermé maintenant, sinon None."""
-    today_close = now_ny.replace(hour=CLOSE_HOUR, minute=0, second=0, microsecond=0)
-    weekday, hour = now_ny.weekday(), now_ny.hour
-    if weekday == 4 and hour >= CLOSE_HOUR:
-        return today_close
-    if weekday == 5:
-        return today_close - timedelta(days=1)
-    if weekday == 6 and hour < OPEN_HOUR:
-        return today_close - timedelta(days=2)
-    if weekday < 4 and CLOSE_HOUR <= hour < OPEN_HOUR:
-        return today_close
-    return None
 
 
 def parse(payload, retrieved_at=None, symbol="AU"):
