@@ -16,13 +16,19 @@
     ['us20', '20 Dollars US', 30.093],
     ['us10', '10 Dollars US', 15.046],
     ['us5', '5 Dollars US', 7.523],
+    // Sans cotation CPoR : toujours en Non Boursable (or fin × instantané).
+    ['napoleon40', 'Napoléon 40 Frs / 40 Lire', 11.61],
+    ['napoleon50', 'Napoléon 50 Frs / 50 Lire', 14.5125],
+    ['napoleon100', 'Napoléon 100 Frs / 100 Lire', 29.025],
   ];
+  const nbOnly = l => ['napoleon40', 'napoleon50', 'napoleon100'].includes(l.product);
   const bars = [
     ['cpor', 'Lingot 1 kg', 1000],
     ['bar500', 'Lingotin 500 g', 500],
     ['bar250', 'Lingotin 250 g', 250],
     ['bar100', 'Lingotin 100 g', 100],
     ['bar50', 'Lingotin 50 g', 50],
+    ['once', 'Lingotin 1 once', 31.1035],
     ['bar20', 'Lingotin 20 g', 20],
     ['bar10', 'Lingotin 10 g', 10],
     ['bar5', 'Lingotin 5 g', 5],
@@ -102,7 +108,7 @@
   const root = document.createElement('section');
   root.id = 'estimation-client';
   root.innerHTML =
-    '<div class="est-head"><h2>Estimation client</h2></div><div id="est-rows"></div><div class="est-add-wrap"><button type="button" id="est-add">＋ Ajouter une ligne</button></div><div class="est-summary"><div class="est-totals"><span>Proposition d’achat Hors Taxes : <b id="est-gross">—</b></span><span class="est-net-block"><span>Net à verser au client : <strong id="est-net">—</strong></span><small id="est-fc-total" class="est-fc-net"></small></span></div><details id="est-tax-details"><summary>Détails des taxes et frais</summary><div id="est-breakdown"></div></details></div><p class="est-note">Les cours sont indicatifs. Les calculs sont actualisés à partir des dernières cotations disponibles.</p><div class="est-reset-wrap"><button type="button" id="est-reset" class="secondary">Réinitialiser</button><button type="button" id="est-print">Imprimer</button></div>';
+    '<div class="est-head"><h2>Proposition de rachat</h2></div><div id="est-rows"></div><div class="est-add-wrap"><button type="button" id="est-add">＋ Ajouter une ligne</button></div><div class="est-summary"><div class="est-totals"><span>Proposition d’achat Hors Taxes : <b id="est-gross">—</b></span><span class="est-net-block"><span>Net à verser au client : <strong id="est-net">—</strong></span><small id="est-fc-total" class="est-fc-net"></small></span></div><details id="est-tax-details"><summary>Détails des taxes et frais</summary><div id="est-breakdown"></div></details></div><p class="est-note">Les cours sont indicatifs. Les calculs sont actualisés à partir des dernières cotations disponibles.</p><div class="est-reset-wrap"><button type="button" id="est-reset" class="secondary">Réinitialiser</button><button type="button" id="est-print">Imprimer</button></div>';
   root.className = 'section';
   document.getElementById('view-rachat').prepend(root);
   const $ = id => document.getElementById(id),
@@ -374,6 +380,26 @@
     const v = GoldFiscal.amount(l.manual);
     return v === null ? null : l.product === 'bijou_argent' || silverCoin(l) ? cents(v) : v;
   }
+  // Prix d'achat du client : saisi par unité ou en total (plusieurs pièces achetées ensemble).
+  const lineCount = l => GoldFiscal.amount(isJewelry(l) ? l.weight : l.qty);
+  const decimal = v => String(Math.round(v * 100) / 100).replace('.', ',');
+  function costPaid(l, count) {
+    if (l.costBy === 'total') return GoldFiscal.amount(l.costTotal);
+    const unit = GoldFiscal.amount(l.cost);
+    return unit === null ? null : unit * count;
+  }
+  function costUnitShown(l) {
+    if (l.costBy !== 'total') return l.cost;
+    const total = GoldFiscal.amount(l.costTotal),
+      count = lineCount(l);
+    return total !== null && count > 0 ? decimal(total / count) : '';
+  }
+  function costTotalShown(l) {
+    if (l.costBy === 'total') return l.costTotal;
+    const unit = GoldFiscal.amount(l.cost),
+      count = lineCount(l);
+    return unit !== null && count > 0 ? decimal(unit * count) : '';
+  }
   function grossFromNet(l) {
     const net = GoldFiscal.amount(l.netManual);
     if (net === null) return null;
@@ -381,10 +407,10 @@
       total = net * count;
     if (l.product === 'dentaire_jaune') return net / 0.885;
     if (isJewelry(l)) return total <= 5000 ? net : net / 0.935;
-    const cost = GoldFiscal.amount(l.cost),
+    const cost = costPaid(l, count),
       comparison =
         l.fiscal === 'TPV'
-          ? GoldFiscal.compare(0, cost === null ? '' : cost * count, l.datePending ? '' : l.date)
+          ? GoldFiscal.compare(0, cost === null ? '' : cost, l.datePending ? '' : l.date)
           : null;
     let gross = total / 0.885;
     if (comparison?.complete) {
@@ -438,7 +464,11 @@
     return r > 0 ? cents(r * count * ratio - c.gross) : null;
   }
   function productName(l) {
-    const name = searchable.find(p => p[0] === l.product)?.[1] || l.product || 'Choisir un produit';
+    const name =
+      (isDiverse(l) && String(l.coinName || '').trim().slice(0, 80)) ||
+      searchable.find(p => p[0] === l.product)?.[1] ||
+      l.product ||
+      'Choisir un produit';
     return l.product && !isJewelry(l) && !isBoursable(l)
       ? l.product === 'coq'
         ? 'NB Napoléon 20 Frs'
@@ -487,9 +517,11 @@
             : '');
   }
   function discountAlert(l) {
-    let threshold;
-    if (l.product === 'bijou' || l.product === 'dentaire_jaune') threshold = 18;
-    else if (l.mode === 'cpor' && bars.some(p => p[0] === l.product && p[2] <= 500)) threshold = 4;
+    // ! sous le seuil, ✗ sous le minimum ; pas de signal sur l'or boursable ni l'argent en pièces.
+    let threshold, minimum;
+    if (l.product === 'bijou') [threshold, minimum] = { 9: [25, 20], 14: [23, 18], 18: [18, 15], 22: [18, 15] }[l.titre] || [];
+    else if (l.product === 'dentaire_jaune') [threshold, minimum] = [19, 16];
+    else if (l.product === 'bijou_argent') [threshold, minimum] = [38, 30];
     else if (
       l.product === 'divers_or' ||
       (!isJewelry(l) &&
@@ -498,22 +530,27 @@
         l.product !== 'cpor' &&
         l.mode === 'fonte')
     )
-      threshold = 10;
-    else return null;
+      [threshold, minimum] = [12, 11];
+    if (threshold === undefined) return null;
     const r = reference(l),
       p = price(l);
     if (!(r > 0) || p === null || !Number.isFinite(p)) return null;
-    const discount = 100 * (1 - p / r);
-    if (discount >= threshold - 1e-7) return null;
+    const discount = 100 * (1 - p / r),
+      // Comparé au centième, comme affiché : un prix arrondi au centime ne change pas le signal.
+      shown = Math.round(discount * 100) / 100;
+    if (shown >= threshold - 1e-7) return null;
+    const bad = shown < minimum - 1e-7,
+      limit = v => v.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' %';
     return {
       threshold,
+      minimum,
+      level: bad ? 'bad' : 'mid',
       discount,
+      recap: bad ? '✗ Trop bas : FC sous ' + limit(minimum) : '! Limite : FC sous ' + limit(threshold),
       text:
-        'Attention : FC de ' +
+        (bad ? '✗ Trop bas : FC de ' : '! Limite : FC de ') +
         discount.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 4 }) +
-        ' %, sous le seuil de ' +
-        threshold +
-        ' %.',
+        (bad ? ' %, sous le minimum de ' + limit(minimum) + '.' : ' %, sous le seuil de ' + limit(threshold) + '.'),
     };
   }
   function updateDiscountAlert(el, l) {
@@ -528,6 +565,7 @@
     }
     message.hidden = !alert;
     message.textContent = alert?.text || '';
+    message.classList.toggle('est-alert-bad', alert?.level === 'bad');
     let recap = el.querySelector('.est-line-alert');
     if (!recap) {
       recap = document.createElement('span');
@@ -535,8 +573,10 @@
       el.querySelector('.est-line-title').append(recap);
     }
     recap.hidden = !alert;
-    recap.textContent = alert ? 'Attention : FC sous ' + alert.threshold + ' %' : '';
+    recap.textContent = alert?.recap || '';
+    recap.classList.toggle('est-alert-bad', alert?.level === 'bad');
     el.classList.toggle('est-below-threshold', !!alert);
+    el.classList.toggle('est-below-minimum', alert?.level === 'bad');
   }
   function netMarkup(l, c) {
     const n = fcNet(l, c);
@@ -590,12 +630,12 @@
       explain = gross > 5000 ? 'Bijou : taxe 6,5 %' : 'Bijou : exonéré (≤ 5 000 €)';
       details = `Montant du bijou : ${fmt(gross)}`;
     } else {
-      const cost = GoldFiscal.amount(l.cost),
+      const cost = costPaid(l, count),
         comparison =
           l.fiscal === 'TPV'
             ? GoldFiscal.compare(
                 gross,
-                cost === null ? '' : cost * count,
+                cost === null ? '' : cost,
                 l.datePending ? '' : l.date
               )
             : GoldFiscal.compare(gross, '', '');
@@ -642,6 +682,8 @@
       fees: '7,5',
       fiscal: 'TMP',
       cost: '',
+      costTotal: '',
+      costBy: 'unit',
       date: '',
       dateDraft: null,
       datePending: false,
@@ -649,7 +691,11 @@
       netManual: null,
       coinWeight: '',
       purity: '',
+      coinName: '', // Pièce Divers : désignation (tapée ou remplie par le scanner de pièces)
     };
+  }
+  function textInput(field, value, label) {
+    return `<label>${label}<input data-field="${field}" type="text" maxlength="80" value="${escapeHTML(value)}"></label>`;
   }
   function input(field, value, label) {
     return `<label>${label}<input data-field="${field}" type="text" inputmode="decimal" value="${escapeHTML(value)}"></label>`;
@@ -685,14 +731,17 @@
         `<div class="est-rowtop"><span class="est-num">${i + 1}.</span><select data-field="product" aria-label="Produit">${catalog}</select><button type="button" data-action="remove" class="est-remove" title="Supprimer la ligne">×</button></div>` +
         (jewelry
           ? `<div class="est-fields est-four"><label>Titrage<select data-field="titre">${l.product === 'dentaire_jaune' ? opt('750', '750‰') : l.product === 'bijou_argent' ? opt('925', '925‰') : opt('9', '9K · 375‰') + opt('14', '14K · 585‰') + opt('18', '18K · 750‰') + opt('22', '22K · 900‰')}</select></label>${input('weight', l.weight, 'Poids total (g)')}${input('manual', netUnit(l) === null ? '' : netUnit(l).toFixed(2), 'Prix net client €/g')}${input('gtax', gtax === null ? '' : gtax.toFixed(2), 'GtaX %')}</div>`
-          : `${customSpecs(l) ? `<div class="est-mode"><span>Valorisation : ${l.product === 'cpor' ? 'Boursable' : 'Non Boursable'}</span></div><div class="est-fields est-two">${input('coinWeight', l.coinWeight, l.product === 'cpor' ? 'Poids par lingot (g)' : 'Poids par pièce (g)')}${input('purity', l.purity, 'Titrage (‰)')}</div>` : `<div class="est-mode"><span>Valorisation</span><div><button type="button" data-action="cpor" class="${l.mode === 'cpor' ? 'chosen' : ''}">Boursable</button><button type="button" data-action="fonte" class="${l.mode === 'fonte' ? 'chosen' : ''}">Non Boursable</button></div></div>`}<div class="est-fields ${detailedFees(l) ? 'est-five' : 'est-four'}">${input('qty', l.qty, 'Quantité')}${detailedFees(l) ? input('agencyFees', agencyFees(l) === null ? '' : agencyFees(l).toFixed(2), 'FC Agence (%)') : ''}${input('fees', displayedFees(l), detailedFees(l) ? '% GtaX' : 'FC %')}${input('manual', netUnit(l) === null ? '' : netUnit(l).toFixed(2), 'Prix net client / unité (€)')}<label>Fiscalité<select data-field="fiscal">${opt('TMP', 'TMP') + opt('TPV', 'Comparer TMP / TPV')}</select></label></div>${l.fiscal === 'TPV' ? `<div class="est-fields est-two">${input('cost', l.cost, 'Prix d’achat / unité (€)')}<label>Date d’acquisition<input data-field="date" type="date" value="${escapeHTML(l.dateDraft ?? l.date)}"><small class="est-date-status" aria-live="polite">${l.date && !GoldFiscal.date(l.date) ? 'Date invalide ou future' : ''}</small></label></div>` : ''}`) +
+          : `${customSpecs(l) ? `<div class="est-mode"><span>Valorisation : ${l.product === 'cpor' ? 'Boursable' : 'Non Boursable'}</span></div><div class="est-fields ${isDiverse(l) ? 'est-coin-fields' : 'est-two'}">${isDiverse(l) ? textInput('coinName', l.coinName, 'Désignation') : ''}${input('coinWeight', l.coinWeight, l.product === 'cpor' ? 'Poids par lingot (g)' : 'Poids par pièce (g)')}${input('purity', l.purity, 'Titrage (‰)')}</div>` :`<div class="est-mode"><span>Valorisation</span><div>${nbOnly(l) ? '' : `<button type="button" data-action="cpor" class="${l.mode === 'cpor' ? 'chosen' : ''}">Boursable</button>`}<button type="button" data-action="fonte" class="${l.mode === 'fonte' ? 'chosen' : ''}">Non Boursable</button></div></div>`}<div class="est-fields ${detailedFees(l) ? 'est-five' : 'est-four'}">${input('qty', l.qty, 'Quantité')}${detailedFees(l) ? input('agencyFees', agencyFees(l) === null ? '' : agencyFees(l).toFixed(2), 'FC Agence (%)') : ''}${input('fees', displayedFees(l), detailedFees(l) ? '% GtaX' : 'FC %')}${input('manual', netUnit(l) === null ? '' : netUnit(l).toFixed(2), 'Prix net client / unité (€)')}<label>Fiscalité<select data-field="fiscal">${opt('TMP', 'TMP') + opt('TPV', 'Comparer TMP / TPV') + opt('NR', 'Non-résident : aucune taxe')}</select></label></div>${l.fiscal === 'TPV' ? `<div class="est-fields est-three">${input('cost', costUnitShown(l), 'Prix d’achat / unité (€)')}${input('costTotal', costTotalShown(l), 'Prix d’achat total (€)')}<label>Date d’acquisition<input data-field="date" type="date" value="${escapeHTML(l.dateDraft ?? l.date)}"><small class="est-date-status" aria-live="polite">${l.date && !GoldFiscal.date(l.date) ? 'Date invalide ou future' : ''}</small></label></div>` : ''}`) +
         `<div class="est-reference">${l.product === 'cpor' ? 'Référence CPoR · poids et titrage' : silverCoin(l) || l.product === 'divers_argent' ? (l.mode === 'fonte' ? 'Référence Non Boursable C3E' : 'Référence cours Gold.fr') : l.product === 'bijou_argent' ? 'Référence argent C3E achat · 925‰' : jewelry || l.mode === 'fonte' ? 'Référence or pur Kitco' : 'Référence CPoR'} : ${fmt(r)}${jewelry ? ' /g' : ' / unité'}${quoteStamp(l)}${!jewelry ? ' · GtaX : ' + (gtax === null ? '—' : gtax.toFixed(2) + ' %') : ''}</div><div class="est-rowbottom"><span>${c?.regime ? c.regime + ' · ' : ''}Taxe : ${c ? fmt(c.tax) : 'Données incomplètes'}</span><b>Net client : ${c ? fmt(c.net) : '—'}</b></div>${netMarkup(l, c)}`;
       const body = document.createElement('div');
       body.className = 'est-line-body';
       while (el.firstChild) body.append(el.firstChild);
       const detail = document.createElement('details');
       detail.className = 'est-line-details';
-      detail.open = openLine === l.id;
+      // Une seule ligne dépliée à la fois (celle qu'on saisit ou qu'on rouvre), sur
+      // ordinateur comme sur petit écran ; les autres se résument en une ligne. Sans ligne
+      // choisie (ouverture d'une proposition), la dernière est dépliée.
+      detail.open = openLine === l.id || (openLine === null && i === lines.length - 1);
       const title = document.createElement('summary');
       title.className = 'est-line-title';
       const name = document.createElement('span');
@@ -738,6 +787,8 @@
       if (field && document.activeElement !== field) field.value = value;
     };
     put('manual', netUnit(l) === null ? '' : netUnit(l).toFixed(2));
+    put('cost', costUnitShown(l));
+    put('costTotal', costTotalShown(l));
     if (!j) {
       put('fees', displayedFees(l));
       if (detailedFees(l))
@@ -756,6 +807,13 @@
     bottom.querySelector('b').textContent = 'Net client : ' + (c ? fmt(c.net) : '—');
     el.querySelector('.est-line-recap').textContent =
       lineRecap(l) + ' · Net : ' + (c ? fmt(c.net) : '—');
+    // Pièce Divers : désignation tapée, reprise dans le titre et le nom de la ligne.
+    if (isDiverse(l)) {
+      const nameNode = el.querySelector('.est-line-title > span:first-child'),
+        search = el.querySelector('input[aria-label="Rechercher un produit"]');
+      if (nameNode) nameNode.textContent = lines.indexOf(l) + 1 + '. ' + productName(l);
+      if (search && document.activeElement !== search) search.value = productName(l);
+    }
     let fcNode = el.querySelector('.est-fc-net');
     const fcValue = fcNet(l, c);
     if (fcValue !== null || detailedFees(l)) {
@@ -845,7 +903,7 @@
             ? `Bijoux argent 925‰ · ${escapeHTML(l.weight)} g`
             : l.product === 'bijou'
               ? `Bijoux ${l.titre}K · ${escapeHTML(l.weight)} g`
-              : productName(l) + ` · ${escapeHTML(l.qty)} unité(s)`;
+              : escapeHTML(productName(l)) + ` · ${escapeHTML(l.qty)} unité(s)`;
       detail.push(
         `<div class="est-tax-item"><div><b>${i + 1}. ${name}</b><strong>${fmt(c.tax)}</strong></div><small>${c.explain}</small><small>${c.details}</small></div>`
       );
@@ -898,8 +956,12 @@
       return;
     }
     const following = row.nextElementSibling;
-    if (following)
+    if (following) {
+      // Ligne suivante repliée : dépliée d'abord (les autres se replient).
+      const fold = following.querySelector('.est-line-details');
+      if (fold && !fold.open) fold.open = true;
       (rowFields(following)[0] || following.querySelector('.product-search input'))?.focus();
+    }
     else $('est-add').click();
   });
   $('est-rows').addEventListener('click', e => {
@@ -912,7 +974,7 @@
       lines.splice(i, 1);
       if (openLine === id) openLine = lines[Math.min(i, lines.length - 1)]?.id ?? null;
     } else {
-      if (customSpecs(lines[i])) return;
+      if (customSpecs(lines[i]) || nbOnly(lines[i])) return;
       lines[i].mode = b.dataset.action;
       lines[i].fees = defaultFees(lines[i]);
       lines[i].manual = null;
@@ -951,7 +1013,8 @@
           l.fiscal = 'TMP';
         }
       } else {
-        l.mode = silverCoin(l) || isDiverse(l) ? 'fonte' : 'cpor';
+        // Demi Napoléon (10 F) : toujours en Non Boursable.
+        l.mode = silverCoin(l) || isDiverse(l) || v === 'demi_napoleon' || nbOnly(l) ? 'fonte' : 'cpor';
         l.fees = defaultFees(l);
       }
     } else if (f === 'titre') {
@@ -969,6 +1032,9 @@
     } else if (f === 'fees') {
       l.fees = v;
       l.manual = null;
+    } else if (f === 'cost' || f === 'costTotal') {
+      l[f] = v;
+      l.costBy = f === 'cost' ? 'unit' : 'total';
     } else if (f === 'manual') {
       l.netManual = v;
       l.manual = v;
@@ -990,6 +1056,64 @@
     }
   }
   $('est-rows').addEventListener('change', onFieldChange);
+  // Pièces Or Non Boursables (dont l'Or divers, jamais coté) : FC validés sous le seuil
+  // (12 %), une fenêtre le signale.
+  // « J'en ai conscience » garde le prix (plus de fenêtre pour la ligne tant qu'elle reste
+  // sous le seuil) ; « Pas question » remet les FC par défaut.
+  const nbGoldCoin = l =>
+    l.product === 'divers_or' ||
+    (!isJewelry(l) && !silverCoin(l) && !isDiverse(l) && l.product !== 'cpor' && l.product !== 'dentaire_jaune' && l.mode === 'fonte');
+  let oliverDialog = null;
+  function oliverAsk(l, alert) {
+    if (!oliverDialog) {
+      oliverDialog = document.createElement('dialog');
+      oliverDialog.className = 'est-oliver';
+      oliverDialog.style.cssText =
+        'max-width:440px;padding:22px 24px;border-radius:15px;border:1px solid #c98a2e;background:#1b2a34;color:#edf2f5;box-shadow:0 22px 65px #0008;';
+      oliverDialog.innerHTML =
+        '<h3 style="margin:0 0 10px;color:#f3b14f;font-size:20px">Olivier gagne plus que toi à ce prix-là !</h3>' +
+        '<p class="est-oliver-text" style="margin:0 0 18px;font-size:14px;line-height:1.45;color:#d6e2ea"></p>' +
+        '<div style="display:flex;justify-content:flex-end;gap:10px;flex-wrap:wrap">' +
+        // « J'en ai conscience » en retrait : le choix mis en avant est de remettre les FC.
+        '<button type="button" data-oliver="ok" style="background:transparent;border:1px solid #4b626f;color:#b5c7d3;font-weight:500">J’en ai conscience</button>' +
+        '<button type="button" data-oliver="reset" class="primary">Pas question</button></div>';
+      root.append(oliverDialog);
+    }
+    oliverDialog.querySelector('.est-oliver-text').textContent =
+      'FC de ' +
+      alert.discount.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) +
+      (l.product === 'divers_or' ? ' % sur cet Or divers (Non Boursable), sous les ' : ' % sur ces pièces en Or Non Boursables, sous les ') +
+      alert.threshold.toLocaleString('fr-FR') +
+      ' % habituels.';
+    oliverDialog.querySelector('[data-oliver="ok"]').onclick = () => {
+      l.oliverAck = true;
+      oliverDialog.close();
+    };
+    oliverDialog.querySelector('[data-oliver="reset"]').onclick = () => {
+      l.fees = defaultFees(l);
+      l.manual = null;
+      l.netManual = null;
+      l.oliverAck = false;
+      oliverDialog.close();
+      render();
+    };
+    // Échap : comme « J'en ai conscience » n'a pas été choisi, la question reviendra.
+    if (!oliverDialog.open) oliverDialog.showModal();
+  }
+  function oliverCheck(l) {
+    if (!nbGoldCoin(l)) return;
+    const alert = discountAlert(l);
+    if (!alert) {
+      l.oliverAck = false; // revenu au-dessus du seuil : la question reviendra s'il redescend
+      return;
+    }
+    if (!l.oliverAck) oliverAsk(l, alert);
+  }
+  $('est-rows').addEventListener('change', e => {
+    if (!['fees', 'agencyFees', 'manual'].includes(e.target.dataset.field)) return;
+    const l = lines.find(x => x.id === Number(e.target.closest('.est-row')?.dataset.id));
+    if (l) oliverCheck(l);
+  });
   $('est-rows').addEventListener('input', e => {
     if (
       [
@@ -1000,8 +1124,10 @@
         'weight',
         'qty',
         'cost',
+        'costTotal',
         'coinWeight',
         'purity',
+        'coinName',
       ].includes(e.target.dataset.field)
     )
       onFieldChange(e);
@@ -1073,6 +1199,9 @@
   });
   const updated = $('last-updated');
   if (updated) observer.observe(updated, { childList: true, characterData: true, subtree: true });
+  // Actualiser les prix proposés à chaque retour de données (draw() d'app.js, applySilver,
+  // applyC3e émettent tous « prices-updated »).
+  window.matchMedia('(min-width: 900px)').addEventListener('change', render);
   window.addEventListener('prices-updated', refreshEstimates);
   render();
 })();

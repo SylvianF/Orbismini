@@ -1,5 +1,20 @@
 # Historique
 
+## 20/11/2026 — Proposition de rachat : modifications d'Orbis reprises
+
+- Nom « Proposition de rachat » (au lieu d'« Estimation client »).
+- Nouveaux produits : Napoléon 40, 50 et 100 Frs / Lire (toujours Non Boursable, or fin ×
+  instantané) et lingotin d'une once.
+- Comparer TMP / TPV : prix d'achat du client par unité ou en total.
+- Signaux de remise par produit : « ! Limite » sous le seuil, « ✗ Trop bas » sous le minimum
+  (bijoux 9 K 25/20 %, 14 K 23/18 %, 18 et 22 K 18/15 %, dentaire 19/16 %, bijoux argent 38/30 %,
+  pièces or Non Boursables 12/11 %).
+- Pièces or Non Boursables (et Or divers) sous 12 % de FC : fenêtre « Olivier gagne plus que toi
+  à ce prix-là ! » (« J'en ai conscience » / « Pas question »).
+- Une seule ligne dépliée à la fois ; Pièce Divers : désignation tapée reprise dans le titre.
+- Pas repris (propre au PC) : « Dernières propositions » et bouton « Scanner » des lignes Pièce
+  Divers.
+
 ## 20/11/2026 — Calcul du prix d'achat des pièces en argent ; plus de bouton « Retour aux cours »
 
 - Cours de l'Argent : chaque pièce connue des calculs affiche son prix de rachat et s'ouvre,

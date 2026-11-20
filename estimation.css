@@ -348,3 +348,19 @@
 .est-net-block {
   align-items: flex-start;
 }
+/* Comparer TMP / TPV : prix d'achat par unité ou total, puis date (comme Orbis). */
+.est-three {
+  margin-top: 10px;
+}
+/* Signaux de remise : « ! Limite » sous le seuil, « ✗ Trop bas » sous le minimum. */
+.est-margin-warning.est-alert-bad {
+  color: #ffc4bf;
+  background: #4a2523;
+  border-left-color: #ff7b72;
+}
+.est-line-alert.est-alert-bad {
+  color: #ff9d96;
+}
+.est-row.est-below-minimum {
+  border-color: #c9625b;
+}
