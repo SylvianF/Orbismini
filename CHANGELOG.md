@@ -1,5 +1,12 @@
 # Historique
 
+## 20/11/2026 — Ticket : type de dépense et carte d'échelle
+
+- Type du ticket à choisir comme l'agence (retenu d'une fois sur l'autre) : carburant, péage,
+  restaurant ou parking. Scellé et signé avec le reste ; Orbis nomme le PDF « Péage 20.11 (12,40€).pdf »…
+- scan-feuille.js repris d'Orbis (395e609) : carte d'échelle imprimée reconnue d'abord (4 carrés de
+  8 mm, échelle exacte, perspective corrigée, 3 carrés suffisent), fausses détections écartées.
+
 ## 20/11/2026 — Ticket : feuille à petits carreaux avec repères
 
 - scan-feuille.js repris d'Orbis (0119501) : une feuille à petits carreaux portant 3 cases noircies

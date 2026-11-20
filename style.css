@@ -1193,7 +1193,13 @@ body::before {
   grid-template-columns: repeat(3, 1fr);
   gap: 8px;
 }
-.tk-cities button.chosen {
+.tk-kinds {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+}
+.tk-cities button.chosen,
+.tk-kinds button.chosen {
   border-color: var(--gold);
   color: var(--gold);
   background: rgba(233, 191, 117, 0.12);

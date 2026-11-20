@@ -10,6 +10,8 @@
   const view = document.getElementById('view-ticket');
   if (!view) return;
   const CITIES = ['Nancy', 'Troyes', 'Calais'];
+  // Type de dépense (nom du PDF dans Orbis : « Péage 20.11 (12,40€).pdf »…).
+  const KINDS = { carburant: 'Carburant', peage: 'Péage', restaurant: 'Restaurant', parking: 'Parking' };
   const SETTINGS = 'orbismini-tickets';
   const el = (tag, props = {}, ...kids) => {
     const e = Object.assign(document.createElement(tag), props);
@@ -41,9 +43,14 @@
   function settings() {
     try {
       const s = JSON.parse(localStorage.getItem(SETTINGS) || '{}');
-      return { links: s.links || {}, phoneName: s.phoneName || '', city: CITIES.includes(s.city) ? s.city : '' };
+      return {
+        links: s.links || {},
+        phoneName: s.phoneName || '',
+        city: CITIES.includes(s.city) ? s.city : '',
+        kind: KINDS[s.kind] ? s.kind : 'carburant',
+      };
     } catch {
-      return { links: {}, phoneName: '', city: '' };
+      return { links: {}, phoneName: '', city: '', kind: 'carburant' };
     }
   }
   const save = s => localStorage.setItem(SETTINGS, JSON.stringify(s));
@@ -308,7 +315,7 @@
           el(
             'div',
             { className: 'tk-item' + (t.state === 'range' ? ' done' : '') },
-            el('span', { textContent: t.city + ' · ' + euro(t.amount) + ' · ' + dayText(t.day) }),
+            el('span', { textContent: (KINDS[t.kind] || 'Carburant') + ' · ' + t.city + ' · ' + euro(t.amount) + ' · ' + dayText(t.day) }),
             el('b', { textContent: words[t.state] || t.state })
           )
         )
@@ -323,27 +330,35 @@
       msg.textContent = text;
       msg.classList.toggle('tk-bad', !!bad);
     };
-    // Agence (retenue d'une fois sur l'autre).
-    let city = s.city;
-    const cityRow = el('div', { className: 'tk-cities', role: 'group' });
-    const paintCities = () =>
-      cityRow.replaceChildren(
-        ...CITIES.map(c =>
-          el('button', {
-            type: 'button',
-            textContent: c,
-            className: c === city ? 'chosen' : '',
-            onclick: () => {
-              city = c;
-              const st = settings();
-              st.city = c;
-              save(st);
-              paintCities();
-            },
-          })
-        )
-      );
-    paintCities();
+    // Agence et type de dépense (retenus d'une fois sur l'autre).
+    let city = s.city,
+      kind = s.kind;
+    const choice = (cls, options, get, set) => {
+      const row = el('div', { className: cls, role: 'group' });
+      const paint = () =>
+        row.replaceChildren(
+          ...options.map(([value, label]) =>
+            el('button', {
+              type: 'button',
+              textContent: label,
+              className: value === get() ? 'chosen' : '',
+              onclick: () => {
+                set(value);
+                paint();
+              },
+            })
+          )
+        );
+      paint();
+      return row;
+    };
+    const remember = (k, v) => {
+      const st = settings();
+      st[k] = v;
+      save(st);
+    };
+    const cityRow = choice('tk-cities', CITIES.map(c => [c, c]), () => city, v => remember('city', (city = v)));
+    const kindRow = choice('tk-kinds', Object.entries(KINDS), () => kind, v => remember('kind', (kind = v)));
     // Photo.
     let photo = null;
     const preview = el('img', { className: 'tk-preview', alt: 'Ticket remis au propre', hidden: true });
@@ -396,6 +411,7 @@
         const t = {
           id: 't' + day + '-' + hex(crypto.getRandomValues(new Uint8Array(10))),
           city,
+          kind,
           amount: value.toFixed(2),
           day: photo.day,
           created: Date.now(),
@@ -405,8 +421,8 @@
         const jpegBytes = unb64(photo.jpeg);
         const jpegHash = hex(await crypto.subtle.digest('SHA-256', jpegBytes));
         for (const [pc, link] of links) {
-          const signature = await mac(link.secret, ['ticket1', t.id, t.city, t.amount, t.day, device(), jpegHash]);
-          const payload = JSON.stringify({ v: 1, id: t.id, city, amount: t.amount, day: t.day, phone: device(), jpeg: photo.jpeg, mac: signature });
+          const signature = await mac(link.secret, ['ticket2', t.id, t.city, kind, t.amount, t.day, device(), jpegHash]);
+          const payload = JSON.stringify({ v: 2, id: t.id, city, kind, amount: t.amount, day: t.day, phone: device(), jpeg: photo.jpeg, mac: signature });
           t.packets[pc] = b64(await seal(link.key, '/ticket/' + t.id, bytes(payload)));
         }
         await put(t); // gardé ici jusqu'à « rangé »
@@ -414,7 +430,7 @@
         try {
           t.state = await deliver(t);
           await put(t);
-          draw('Ticket envoyé : ' + city + ', ' + euro(t.amount) + '. Le PC le rangera tout seul.');
+          draw('Ticket envoyé : ' + KINDS[kind] + ', ' + city + ', ' + euro(t.amount) + '. Le PC le rangera tout seul.');
         } catch (e) {
           draw('Ticket gardé sur ce téléphone, envoi réessayé tout seul : ' + e.message);
         }
@@ -494,10 +510,12 @@
       el(
         'section',
         { className: 'section tk' },
-        el('div', { className: 'eyebrow', textContent: 'TICKET DE CARBURANT' }),
-        el('p', { className: 'small', textContent: 'Pose le ticket sur une feuille A4 blanche : il sera recadré sur la feuille, à sa taille réelle.' }),
+        el('div', { className: 'eyebrow', textContent: 'TICKET DE FRAIS' }),
+        el('p', { className: 'small', textContent: 'Pose le ticket sur la carte d’échelle ou une feuille A4 blanche : il sera redressé, à sa taille réelle.' }),
         el('label', { className: 'tk-label', textContent: 'Agence' }),
         cityRow,
+        el('label', { className: 'tk-label', textContent: 'Type' }),
+        kindRow,
         el('label', { className: 'tk-label', textContent: 'Photo' }),
         shoot,
         file,
