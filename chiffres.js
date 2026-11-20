@@ -92,25 +92,29 @@
   }
 
   // Lignes d'un bloc de chiffres ; group : un seul groupe (achats, marge, ventes, margeReelle).
+  // source « exercice » (Mois, Mois préc., Année) : chiffres du tableau « Exercice comptable »
+  // d'Orbis : achats HT, CA HT (envois compris), marge HT ; pas de TTC.
   function rows(block, group) {
     const out = [];
+    const exercice = block.source === 'exercice';
     if (group) block = { [group]: block[group] };
     const row = (label, value, cls = '') => out.push(el('div', { className: 'ch-row ' + cls }, el('span', { textContent: label }), el('b', { textContent: value })));
+    const money = (label, v, cls) => v != null && row(label, euro(v), cls);
+    const margin = v => 'ch-margin' + (Number(v) < 0 ? ' ch-neg' : '');
     if (block.achats) {
       const a = block.achats;
-      row('Achats', a.count + ' achat' + (a.count > 1 ? 's' : '') + (a.weight != null ? ' · ' + grams(a.weight) : ''));
-      row('Achats taxe comprise', euro(a.ht));
-      row('Net payé aux clients', euro(a.ttc));
+      if (a.count != null) row('Achats', a.count + ' achat' + (a.count > 1 ? 's' : '') + (a.weight != null ? ' · ' + grams(a.weight) : ''));
+      money(exercice ? 'Achats HT' : 'Achats taxe comprise', a.ht);
+      money('Net payé aux clients', a.ttc);
     }
-    if (block.marge != null) row('Marge théorique', euro(block.marge), 'ch-margin' + (Number(block.marge) < 0 ? ' ch-neg' : ''));
+    if (block.marge != null) row('Marge théorique', euro(block.marge), margin(block.marge));
     if (block.ventes) {
       const v = block.ventes;
-      row('Ventes', v.count + ' vente' + (v.count > 1 ? 's' : ''));
-      row('Ventes HT', euro(v.ht));
-      row('Ventes TTC', euro(v.ttc));
+      if (v.count != null) row('Ventes', v.count + ' vente' + (v.count > 1 ? 's' : ''));
+      money(exercice ? 'CA HT' : 'Ventes HT', v.ht);
+      money('Ventes TTC', v.ttc);
     }
-    if (block.margeReelle != null)
-      row('Marge réelle', euro(block.margeReelle), 'ch-margin' + (Number(block.margeReelle) < 0 ? ' ch-neg' : ''));
+    if (block.margeReelle != null) row('Marge réelle', euro(block.margeReelle), margin(block.margeReelle));
     return out;
   }
 

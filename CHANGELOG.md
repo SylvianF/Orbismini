@@ -1,5 +1,11 @@
 # Historique
 
+## 20/11/2026 — Chiffres : Mois, Mois préc. et Année comme le tableau « Exercice comptable »
+
+- Avec les chiffres de l'exercice d'Orbis (source « exercice ») : « Achats HT », « CA HT » (envois
+  compris) et « Marge réelle » (marge HT du tableau) ; les lignes TTC absentes ne s'affichent plus.
+  Aujourd'hui et Hier ne changent pas.
+
 ## 20/11/2026 — Chiffres : un seul cadre, la période en haut
 
 - Un seul cadre avec toutes les lignes (achats, marge théorique, ventes, marge réelle) et, au-dessus,
