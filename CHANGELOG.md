@@ -1,5 +1,11 @@
 # Historique
 
+## 20/11/2026 — Thèmes Onyx et Perle, comme dans Orbis
+
+- Menu « Thème » en bas de l'écran des cours : Saphir (d'origine), Onyx et Perle (clair), avec
+  les règles de couleur d'Orbis (theme.js repris d'Orbis, feuilles d'Orbismini recolorées) ;
+  choix retenu sur le téléphone, barre d'état du téléphone assortie.
+
 ## 20/11/2026 — Ménage du code (suite)
 
 - Rien ne change à l’écran.

@@ -64,6 +64,7 @@ Cours et courbe sur l’écran d’accueil grâce à l’app Scriptable : script
 - `meteo.js` (onglet Météo) et `meteo_or.py` (calcul des indices, repris de GoldGestion).
 - `alerte.py` : alerte de cours commune avec Orbis ; `alerte_appareils.py` : alerte propre à
   chaque téléphone (gardée sur GitHub, branche « alertes ») ; page : `alerte-cours.js`.
+- `theme.js` : thèmes Saphir, Onyx et Perle, repris d'Orbis (menu en bas de l'écran des cours).
 - `cours-plus.js` : recherche, favoris, prix qui clignotent, alerte cours périmés,
   écran d’ouverture.
 - Calculs repris de l’ancienne GoldApp : `estimation.js` + `estimation.css`, `alignment.js`,
