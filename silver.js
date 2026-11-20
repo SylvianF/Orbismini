@@ -62,7 +62,10 @@
     root.replaceChildren();
     const fmt = new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' });
     for (const product of p.products) {
-      const row = document.createElement('div');
+      // Pièce connue des calculs (mêmes frais que l’estimation) : touchable, comme l’or.
+      const coin = product.status === 'available' ? window.GoldSilverCoins?.(product.name) : null;
+      const row = document.createElement(coin ? 'button' : 'div');
+      if (coin) row.type = 'button';
       row.className = 'quote silver';
       row.dataset.key = 'ag:' + product.name;
       if (product.status === 'available') row.dataset.price = product.price;
@@ -88,6 +91,28 @@
             ? 'Cotation suspendue'
             : 'Indisponible';
       row.append(name, value);
+      if (coin) {
+        const buy = document.createElement('small');
+        buy.className = 'buyback';
+        buy.textContent = 'Rachat ' + fmt.format(product.price * (1 - coin.fee / 100) * (1 - 0.115));
+        value.append(buy);
+        const arrow = document.createElement('span');
+        arrow.className = 'arrow';
+        arrow.textContent = '›';
+        row.append(arrow);
+        const label = product.name;
+        row.addEventListener('click', () =>
+          openBuy(coin.id, label, {
+            fee: String(coin.fee),
+            gt: coin.gt,
+            img: file ? 'img/argent/' + file : 'img/argent/none.png',
+            priceOf: () => {
+              const q = (saved?.products || []).find(x => x.name === label);
+              return q?.status === 'available' ? q.price : null;
+            },
+          })
+        );
+      }
       root.append(row);
     }
     window.dispatchEvent(new Event('quotes-rendered'));

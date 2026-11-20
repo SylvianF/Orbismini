@@ -72,6 +72,10 @@ let spotValue = null,
   goldMeta = 'Chargement du cours spot…';
 // Frais par défaut : 4 % sur le lingot 1 kg, 7,5 % sur le reste de l’or.
 const defaultBuyFee = id => (id === 'cpor' ? '4' : '7,5');
+// Frais par défaut du produit ouvert (pièce d’argent : les siens, voir silver.js).
+const buyFee = () => selected?.fee ?? defaultBuyFee(selected?.id);
+// Cours de référence du produit ouvert : cotation CPoR, ou cotation Gold.fr pour l’argent.
+const buyPrice = () => (selected?.priceOf ? selected.priceOf() : data[selected?.id]);
 localStorage.removeItem('or-buy-discount');
 function renderQuotes() {
   renderList($('cpor-coins'), coins, false);
@@ -128,7 +132,7 @@ function quickBuyback(id, price) {
 }
 function drawBuy() {
   if (!selected) return;
-  const price = data[selected.id];
+  const price = buyPrice();
   $('buy-reference').textContent = eur(price);
   const raw = $('buy-discount').value,
     discount = parseNum(raw);
@@ -170,18 +174,19 @@ function drawFees(price, discount) {
     note.hidden = true;
     return;
   }
-  const goldtradeRate = Math.min(1.5, discount),
-    agencyRate = Math.max(0, discount - 1.5);
+  const share = selected?.gt ?? 1.5, // part GoldTrade : 1,5 % sur l’or, 5 ou 9 % sur l’argent
+    goldtradeRate = Math.min(share, discount),
+    agencyRate = Math.max(0, discount - share);
   goldtrade.textContent = eur((price * goldtradeRate) / 100);
   agency.textContent = eur((price * agencyRate) / 100);
   agencyLabel.textContent =
     'Agence (' + String(Math.round(agencyRate * 100) / 100).replace('.', ',') + ' %)';
   $('fees-goldtrade-label').textContent =
     'GoldTrade (' + String(goldtradeRate).replace('.', ',') + ' %)';
-  note.hidden = discount >= 1.5;
+  note.hidden = discount >= share;
   note.textContent =
-    discount < 1.5
-      ? 'Frais inférieurs à 1,5 % : la part GoldTrade est plafonnée au total des frais.'
+    discount < share
+      ? 'Frais inférieurs à ' + String(share).replace('.', ',') + ' % : la part GoldTrade est plafonnée au total des frais.'
       : '';
 }
 let taxDateCommitted = '',
@@ -232,9 +237,11 @@ $('tax-date').addEventListener('blur', commitTaxDate);
 $('tax-toggle').addEventListener('toggle', () => {
   if ($('tax-toggle').open) drawBuy();
 });
-function openBuy(id, name) {
-  selected = { id, name };
-  $('buy-discount').value = defaultBuyFee(id);
+// options (pièces d’argent) : priceOf (cours actuel), fee (frais par défaut), gt (part
+// GoldTrade), img (illustration).
+function openBuy(id, name, options = {}) {
+  selected = { id, name, ...options };
+  $('buy-discount').value = buyFee();
   $('buy-name').textContent = name;
   let picture = document.querySelector('.buy-heading .buy-img');
   if (!picture) {
@@ -245,7 +252,7 @@ function openBuy(id, name) {
     $('buy-name').before(picture);
   }
   picture.hidden = false;
-  picture.src = 'img/cpor/' + id + '.webp';
+  picture.src = options.img || 'img/cpor/' + id + '.webp';
   $('tax-toggle').open = false;
   $('fees-toggle').open = false;
   $('tax-cost').value = '';
@@ -269,7 +276,6 @@ function closeBuy(updateHistory = true) {
     history.replaceState(null, '', location.pathname + location.search);
   $('cpor-section').scrollIntoView({ block: 'start', behavior: 'instant' });
 }
-$('back').addEventListener('click', () => closeBuy());
 window.addEventListener('popstate', () => {
   if (selected) closeBuy(false);
 });

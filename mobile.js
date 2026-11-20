@@ -128,7 +128,7 @@
     discountInput.value = '25';
     localStorage.removeItem('or-discount');
     for (const id of ['tax-cost', 'tax-date']) document.getElementById(id).value = '';
-    document.getElementById('buy-discount').value = defaultBuyFee(selected?.id);
+    document.getElementById('buy-discount').value = buyFee();
     draw();
     update18();
   });

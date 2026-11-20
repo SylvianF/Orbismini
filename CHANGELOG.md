@@ -1,5 +1,14 @@
 # Historique
 
+## 20/11/2026 — Calcul du prix d'achat des pièces en argent ; plus de bouton « Retour aux cours »
+
+- Cours de l'Argent : chaque pièce connue des calculs affiche son prix de rachat et s'ouvre,
+  comme les pièces d'or, sur le calcul du prix d'achat (cotation Gold.fr, frais par défaut de
+  l'estimation : 34 % pièces françaises, 20 % pièces modernes ; part GoldTrade 9 % ou 5 % ; TMP
+  11,5 % ; comparaison TMP / TPV). Le lingot de 1 kg reste en lecture seule.
+- Calcul du prix d'achat : bouton « ← Retour aux cours » retiré ; on revient en glissant du
+  bord gauche de l'écran.
+
 ## 20/11/2026 — Annonce de mise à jour seulement pour une vraie nouvelle version
 
 - « Une nouvelle version est disponible » ne paraît que si la version en ligne diffère de celle

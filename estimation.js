@@ -61,6 +61,12 @@
     'ag_ecu5',
     'ag_francs100',
   ]);
+  // Pour le calcul d’achat d’une pièce d’argent touchée dans les cours (silver.js) :
+  // frais par défaut et part GoldTrade, d’après le nom de la cotation Gold.fr.
+  window.GoldSilverCoins = name => {
+    const p = silverCoins.find(x => x[1] === name);
+    return p ? { id: p[0], fee: p[3], gt: frenchSilverIds.has(p[0]) ? 9 : 5 } : null;
+  };
   function silverDeduction(l) {
     if (l.product === 'bijou_argent') return 20;
     if (l.product === 'divers_argent') return 9;
