@@ -1,5 +1,11 @@
 # Historique
 
+## 20/11/2026 — Ticket : feuille à petits carreaux avec repères
+
+- scan-feuille.js repris d'Orbis (0119501) : une feuille à petits carreaux portant 3 cases noircies
+  en équerre donne l'échelle et l'inclinaison ; la photo devient une page A4 à l'échelle 1,
+  redressée, bureau et cases effacés. Sans cases noires, la feuille A4 est reconnue comme avant.
+
 ## 20/11/2026 — Ticket : où trouver le code de jumelage
 
 - L'écran Ticket indique où lire le code à 2 chiffres sur le PC : Orbis, Charges → « Téléphones
