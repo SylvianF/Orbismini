@@ -1,5 +1,12 @@
 # Historique
 
+## 20/11/2026 — Ménage du code
+
+- Rien ne change à l’écran.
+- Styles .brand-mark et .back retirés (le bouton « Retour aux cours » n’existe plus).
+- kitco.py : last_close retirée (appelée nulle part depuis octobre).
+- README : liste des fichiers complétée (pièces, tickets, Orbiscan, annonce de mise à jour…).
+
 ## 20/11/2026 — Ticket : envoi sans réseau
 
 - Sans réseau (parking en sous-sol) : « Pas de réseau : ticket gardé sur ce téléphone. Il partira
