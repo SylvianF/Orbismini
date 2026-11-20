@@ -2,16 +2,30 @@
   'use strict';
   // Deux vues : Cours (cotations seules) et Rachat (tous les calculs).
   const nav = document.querySelector('.views');
-  nav.addEventListener('click', e => {
-    const b = e.target.closest('button[data-view]'); // pas <body data-view> (bouton Orbiscan)
-    if (!b) return;
+  // Écran affiché ; tab : onglet allumé (Pièces et Ticket restent sous « Scan »).
+  function showView(view, tab = view) {
     if (typeof selected !== 'undefined' && selected) closeBuy();
-    document.body.dataset.view = b.dataset.view;
-    for (const view of ['cours', 'scan', 'meteo', 'rachat', 'ticket', 'chiffres'])
-      document.getElementById('view-' + view).hidden = b.dataset.view !== view;
+    document.body.dataset.view = view;
+    for (const v of ['cours', 'scans', 'scan', 'meteo', 'rachat', 'ticket', 'chiffres'])
+      document.getElementById('view-' + v).hidden = view !== v;
     window.dispatchEvent(new Event('view-changed'));
-    nav.querySelectorAll('button').forEach(x => x.setAttribute('aria-pressed', String(x === b)));
+    nav.querySelectorAll('button[data-view]').forEach(x => x.setAttribute('aria-pressed', String(x.dataset.view === tab)));
     window.scrollTo({ top: 0, behavior: 'instant' });
+  }
+  nav.addEventListener('click', e => {
+    const b = e.target.closest('button[data-view]'); // pas <body data-view>
+    if (b) showView(b.dataset.view);
+  });
+  // Scan : Pièce inconnue et Ticket s'ouvrent depuis l'écran Scan ; retour en glissant du bord
+  // gauche (ou en touchant « Scan »).
+  document.getElementById('view-scans').addEventListener('click', e => {
+    const card = e.target.closest('[data-open]');
+    if (!card) return;
+    history.pushState({ scan: card.dataset.open }, '');
+    showView(card.dataset.open, 'scans');
+  });
+  window.addEventListener('popstate', () => {
+    if (['scan', 'ticket'].includes(document.body.dataset.view)) showView('scans');
   });
   const hero = document.querySelector('.hero'),
     info = document.createElement('div');

@@ -259,8 +259,8 @@ summary {
   right: 0;
   bottom: 0;
   display: grid;
-  grid-template-columns: repeat(6, 1fr);
-  padding: 6px max(6px, calc((100vw - 560px) / 2)) calc(env(safe-area-inset-bottom) + 6px);
+  grid-template-columns: repeat(4, 1fr);
+  padding: 6px max(10px, calc((100vw - 560px) / 2)) calc(env(safe-area-inset-bottom) + 6px);
   background: rgba(16, 28, 36, 0.92);
   -webkit-backdrop-filter: blur(14px);
   backdrop-filter: blur(14px);
@@ -1257,9 +1257,7 @@ body::before {
 
 /* Chiffres d'Orbis (chiffres.js) : 7 onglets quand l'onglet est là. */
 .views:has(button[data-view='chiffres']:not([hidden])) {
-  grid-template-columns: repeat(7, 1fr);
-  padding-left: max(2px, calc((100vw - 560px) / 2));
-  padding-right: max(2px, calc((100vw - 560px) / 2));
+  grid-template-columns: repeat(5, 1fr);
 }
 .ch-cities {
   margin: 12px 0 4px;
@@ -1295,4 +1293,49 @@ body::before {
 }
 .views button[hidden] {
   display: none;
+}
+
+/* Écran Scan : trois grandes cartes. */
+.scans .eyebrow {
+  margin-bottom: 12px;
+}
+.scan-card {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  width: 100%;
+  margin: 0 0 12px;
+  padding: 18px 16px;
+  text-align: left;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--raised);
+  color: var(--text);
+}
+.scan-card:last-child {
+  margin-bottom: 0;
+}
+.scan-card .scan-ico {
+  flex: none;
+  width: 40px;
+  height: 40px;
+  fill: none;
+  stroke: var(--gold);
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.scan-card .scan-ico .dot {
+  fill: var(--gold);
+  stroke: none;
+}
+.scan-card b {
+  display: block;
+  font-size: 17px;
+}
+.scan-card small {
+  display: block;
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: 13px;
 }

@@ -1,5 +1,11 @@
 # Historique
 
+## 20/11/2026 — Onglet « Scan » : 5 boutons en bas
+
+- Barre du bas : Cours · Météo · Scan · Rachat · Chiffres (Chiffres seulement pour les téléphones
+  autorisés). L'onglet Scan ouvre trois cartes : Orbiscan, Pièce inconnue, Ticket de frais ; retour
+  aux cartes en glissant du bord gauche ou en touchant « Scan ».
+
 ## 20/11/2026 — Chiffres d'Orbis sur le téléphone
 
 - Onglet « Chiffres », seulement sur un téléphone à qui Sylvian l'a ouvert dans Orbis (Réglages ›

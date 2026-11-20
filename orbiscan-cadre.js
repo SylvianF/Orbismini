@@ -1,4 +1,4 @@
-// Bouton « Orbiscan » de la barre du bas : ouvre la page Orbiscan du PC du magasin (servie par
+// Bouton « Orbiscan » de l'écran Scan : ouvre la page Orbiscan du PC du magasin (servie par
 // Orbismini, /orbiscan/) au-dessus de l'écran, en laissant la barre du bas visible : un autre
 // bouton de la barre (ou la croix en haut à gauche) referme Orbiscan.
 (() => {
@@ -10,7 +10,7 @@
 
   function press(active) {
     nav.querySelectorAll('button').forEach(b =>
-      b.setAttribute('aria-pressed', String(active ? b === button : b.dataset.view === document.body.dataset.view))
+      b.setAttribute('aria-pressed', String(active ? b.dataset.view === 'scans' : b.dataset.view === document.body.dataset.view))
     );
   }
   function close() {
@@ -42,7 +42,7 @@
     fit();
     press(true);
   });
-  // Cours, Météo, Pièces, Rachat : on quitte Orbiscan pour l'onglet touché.
+  // Un onglet de la barre touché : on quitte Orbiscan.
   nav.addEventListener('click', e => e.target.closest('button[data-view]') && close(), true);
   window.addEventListener('resize', fit);
   window.addEventListener('keydown', e => e.key === 'Escape' && close());

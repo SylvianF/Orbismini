@@ -12,7 +12,8 @@ serveur.
 
 ## Barre du bas
 
-Cinq onglets et un bouton, dans cet ordre : Cours, Météo, Orbiscan, Pièces, Rachat, Ticket.
+Cinq onglets : Cours, Météo, Scan, Rachat, Chiffres (Chiffres seulement sur un téléphone autorisé dans
+Orbis). **Scan** ouvre trois cartes : Orbiscan, Pièce inconnue, Ticket de frais (mobile.js).
 
 - **Cours** : recherche, favoris (appui long sur un produit), or pur 1 kg avec sa variation
   et son graphique, pièces et lingots CPoR, argent. Sous chaque
@@ -77,7 +78,7 @@ Cours et courbe sur l’écran d’accueil grâce à l’app Scriptable : script
 - Tickets de frais : `ticket.js` (photo, scellé et signé sur le téléphone), `scan-feuille.js`
   (recadrage sur la feuille A4 ou la carte d’échelle, repris tel quel d’Orbis) et
   `tickets_boite.py` (boîte aux lettres entre le téléphone et les PC).
-- Orbiscan : `orbiscan-cadre.js` (bouton de la barre du bas), `orbiscan-shim.js` (photos
+- Orbiscan : `orbiscan-cadre.js` (carte de l'écran Scan), `orbiscan-shim.js` (photos
   chiffrées sur le téléphone), `orbiscan_tunnel.py` (passage vers le relais du PC) et
   `orbiscan_pc.py` (PC retenus, gardés sur GitHub).
 - Serveur : `server.py` et `kitco.py`, `cpor.py`, `bullionvault.py` (cours de secours),
