@@ -1,0 +1,13 @@
+{
+ "devices": {
+  "af360cbee349ccd9469bdac1990232642fad530fcc62d9071fa1cccdcca9c62b": {
+   "seen": "2026-11-20",
+   "state": {
+    "above": 110000.0,
+    "hits": [],
+    "updated": "2026-11-20T08:44:05.519Z"
+   }
+  }
+ },
+ "orbis": []
+}
