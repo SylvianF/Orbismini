@@ -1,5 +1,12 @@
 # Historique
 
+## 20/11/2026 — Ticket : envoi sans réseau
+
+- Sans réseau (parking en sous-sol) : « Pas de réseau : ticket gardé sur ce téléphone. Il partira
+  tout seul dès que le réseau revient » ; dans la liste : « Gardé ici, part au retour du réseau ».
+- Envoi aussitôt que le réseau revient (en plus du retour dans l'application, de l'ouverture et
+  d'un essai par minute, Orbismini ouvert).
+
 ## 20/11/2026 — Ticket : jumelage plus clair
 
 - « Jumeler » sans nom de téléphone ou sans code : message juste sous la ligne du PC, case à

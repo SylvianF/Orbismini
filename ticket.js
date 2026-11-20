@@ -305,7 +305,13 @@
   const list = el('div', { className: 'tk-list' });
   async function drawList() {
     const items = await outbox().catch(() => []);
-    const words = { attente: 'En attente du PC', recu: 'Reçu par le PC', range: 'Rangé ✓', inconnu: 'Renvoi en cours' };
+    const words = {
+      nouveau: 'Gardé ici, part au retour du réseau',
+      attente: 'En attente du PC',
+      recu: 'Reçu par le PC',
+      range: 'Rangé ✓',
+      inconnu: 'Renvoi en cours',
+    };
     list.replaceChildren(
       ...(items.length ? [el('h3', { className: 'list-heading', textContent: 'Tickets envoyés' })] : []),
       ...items
@@ -432,7 +438,11 @@
           await put(t);
           draw('Ticket envoyé : ' + KINDS[kind] + ', ' + city + ', ' + euro(t.amount) + '. Le PC le rangera tout seul.');
         } catch (e) {
-          draw('Ticket gardé sur ce téléphone, envoi réessayé tout seul : ' + e.message);
+          draw(
+            navigator.onLine === false || e instanceof TypeError
+              ? 'Pas de réseau : ticket gardé sur ce téléphone. Il partira tout seul dès que le réseau revient, Orbismini ouvert (ou à sa prochaine ouverture).'
+              : 'Ticket gardé sur ce téléphone, envoi réessayé tout seul : ' + e.message
+          );
         }
         drawList();
       } catch (e) {
@@ -548,6 +558,7 @@
   const visible = () => document.body.dataset.view === 'ticket';
   window.addEventListener('view-changed', () => visible() && (draw(), follow()));
   document.addEventListener('visibilitychange', () => document.visibilityState === 'visible' && follow());
+  window.addEventListener('online', () => follow()); // réseau revenu (sortie de parking…) : envoi aussitôt
   draw();
   follow();
   setInterval(() => document.visibilityState === 'visible' && follow(), 60000);
