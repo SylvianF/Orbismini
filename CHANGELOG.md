@@ -1,5 +1,10 @@
 # Historique
 
+## 20/11/2026 — Ticket : jumelage plus clair
+
+- « Jumeler » sans nom de téléphone ou sans code : message juste sous la ligne du PC, case à
+  remplir entourée en rouge et curseur dedans (avant, le message s'affichait plus haut, hors de vue).
+
 ## 20/11/2026 — Ticket : carte d'échelle sur papier de couleur
 
 - scan-feuille.js repris d'Orbis (563d4b9) : carte imprimée sur papier coloré (vert) : seul le

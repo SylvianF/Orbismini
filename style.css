@@ -1255,3 +1255,10 @@ body::before {
   width: 100%;
   margin: 8px 0;
 }
+.tk-missing {
+  border-color: var(--down) !important;
+  box-shadow: 0 0 0 3px rgba(255, 156, 164, 0.25);
+}
+.tk-pair-msg {
+  margin: 6px 0 0;
+}

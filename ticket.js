@@ -471,6 +471,7 @@
     const pairList = el('div');
     const name = el('input', { value: s.phoneName, placeholder: 'Nom du téléphone (ex. iPhone Sylvian)', maxLength: 40 });
     name.setAttribute('aria-label', 'Nom du téléphone');
+    name.addEventListener('input', () => name.classList.remove('tk-missing'));
     const look = el('button', { type: 'button', className: 'secondary', textContent: 'Chercher les PC' });
     look.onclick = async () => {
       pairMsg.textContent = 'Recherche…';
@@ -483,18 +484,31 @@
           const code = el('input', { inputMode: 'numeric', maxLength: 2, placeholder: 'Code' });
           code.setAttribute('aria-label', 'Code à 2 chiffres affiché sur ' + peer.name);
           const go = el('button', { type: 'button', className: 'secondary', textContent: 'Jumeler' });
+          // Message juste sous la ligne du PC, case fautive entourée et sélectionnée.
+          const rowMsg = el('p', { className: 'small tk-bad tk-pair-msg' });
+          const fail = (text, field) => {
+            rowMsg.textContent = text;
+            for (const f of [name, code]) f.classList.toggle('tk-missing', f === field);
+            if (field) {
+              field.focus();
+              field.scrollIntoView({ block: 'center', behavior: 'smooth' });
+            }
+          };
           go.onclick = async () => {
-            if (!/^\d{2}$/.test(code.value)) return (pairMsg.textContent = 'Tape le code à 2 chiffres affiché sur le PC.');
-            if (!name.value.trim()) return (pairMsg.textContent = 'Donne un nom à ce téléphone.');
+            if (!name.value.trim()) return fail('Donne d’abord un nom à ce téléphone (case au-dessus).', name);
+            if (!/^\d{2}$/.test(code.value)) return fail('Tape le code à 2 chiffres affiché sur le PC.', code);
+            fail('');
             go.disabled = true;
+            go.textContent = 'Jumelage…';
             try {
               await pair(peer, code.value, name.value.trim(), t => draw(t));
             } catch (e) {
-              pairMsg.textContent = e.message;
+              fail(e.message);
               go.disabled = false;
+              go.textContent = 'Jumeler';
             }
           };
-          return el('div', { className: 'tk-pair' }, el('span', { textContent: peer.name }), code, go);
+          return el('div', {}, el('div', { className: 'tk-pair' }, el('span', { textContent: peer.name }), code, go), rowMsg);
         })
       );
     };
