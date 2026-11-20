@@ -7,7 +7,7 @@
     if (!b) return;
     if (typeof selected !== 'undefined' && selected) closeBuy();
     document.body.dataset.view = b.dataset.view;
-    for (const view of ['cours', 'scan', 'meteo', 'rachat', 'ticket'])
+    for (const view of ['cours', 'scan', 'meteo', 'rachat', 'ticket', 'chiffres'])
       document.getElementById('view-' + view).hidden = b.dataset.view !== view;
     window.dispatchEvent(new Event('view-changed'));
     nav.querySelectorAll('button').forEach(x => x.setAttribute('aria-pressed', String(x === b)));

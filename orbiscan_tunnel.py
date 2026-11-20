@@ -94,6 +94,7 @@ class Tunnel:
         self.clock = clock
         self.lock = threading.Condition()
         self.mail = tickets_boite.Mailbox(self.lock)   # tickets de carburant (même ligne ouverte)
+        self.figures = tickets_boite.Figures()         # chiffres d'Orbis, chiffrés pour chaque téléphone
         self.pcs = {}        # id → {name, key, secret, ip, seen, queue}
         self.calls = {}      # numéro → {pc, method, path, ctype, body, at, answer}
 

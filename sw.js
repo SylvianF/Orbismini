@@ -1,5 +1,5 @@
 // Une seule valeur à changer à chaque version (identique au ?v= de index.html).
-const VERSION = '20261120-themes';
+const VERSION = '20261120-chiffres';
 const CACHE = 'mon-or-' + VERSION;
 self.addEventListener('install', e => {
   self.skipWaiting();
@@ -34,6 +34,7 @@ self.addEventListener('install', e => {
             './theme.js',
             './scan-feuille.js',
             './ticket.js',
+            './chiffres.js',
             './logo-cndo.png',
             './manifest.webmanifest',
             './icon.svg',

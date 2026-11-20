@@ -586,7 +586,7 @@ class Handler(SimpleHTTPRequestHandler):
     def tickets(self, method):
         """Tickets de carburant du téléphone (ticket.js, tickets_boite.py) : vrai si traité ici."""
         path = urlparse(self.path).path
-        if path not in ("/api/tickets", "/api/tickets/etat"):
+        if path not in ("/api/tickets", "/api/tickets/etat", "/api/chiffres"):
             return False
         if not self.guard(path):
             return True
@@ -601,6 +601,12 @@ class Handler(SimpleHTTPRequestHandler):
                            for pc, blob in (data.get("packets") or {}).items()}
                 state = T.TUNNEL.mail.post(AA.device_id(self.headers.get("X-Appareil")), data.get("id"), packets)
                 self.send_json({"id": data.get("id"), "state": state})
+            elif path == "/api/chiffres" and method == "GET":
+                # Boîtes des chiffres de ce téléphone (une par PC jumelé) : paquets chiffrés.
+                boxes = (parse_qs(urlparse(self.path).query).get("boxes") or [""])[0].split(",")[:8]
+                with T.TUNNEL.lock:
+                    got = T.TUNNEL.figures.get(boxes)
+                self.send_json({"boxes": {b: base64.b64encode(v).decode() for b, v in got.items()}})
             elif path == "/api/tickets/etat" and method == "GET":
                 ids = (parse_qs(urlparse(self.path).query).get("ids") or [""])[0].split(",")[:50]
                 self.send_json({"states": T.TUNNEL.mail.states(ids)})
@@ -650,6 +656,13 @@ class Handler(SimpleHTTPRequestHandler):
                         with T.TUNNEL.lock:
                             reply["tickets"] = mail.waiting(pc, mark=True)
                     self.send_json(reply)
+                elif path == "/api/orbiscan/relais/chiffres":
+                    # Chiffres d'Orbis pour un téléphone : paquet chiffré, gardé dans sa boîte.
+                    if not T.TUNNEL.authentic(data.get("pc"), data.get("secret")):
+                        raise PermissionError("relais inconnu")
+                    with T.TUNNEL.lock:
+                        T.TUNNEL.figures.put(data.get("box"), base64.b64decode(str(data.get("blob") or ""), validate=True))
+                    self.send_json({"ok": True})
                 elif path in ("/api/orbiscan/relais/ticket", "/api/orbiscan/relais/ticket-range"):
                     # Ticket de carburant : réservé par ce relais (paquet scellé pour lui), ou rangé par Orbis.
                     pc = data.get("pc")

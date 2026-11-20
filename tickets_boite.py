@@ -32,6 +32,33 @@ MAX_PCS_PER_TICKET = 4
 PER_DAY = 30                # tickets par téléphone et par jour
 
 
+BOX = re.compile(r"[0-9a-f]{64}")
+MAX_FIGURES = 300 * 1024
+MAX_BOXES = 300
+
+
+class Figures:
+    """Chiffres d'Orbis pour les téléphones (réglés dans Orbis, Réglages › Téléphones) : le relais
+    les chiffre avec une clé tirée du secret du téléphone et les dépose dans sa boîte ; Orbismini
+    garde le dernier paquet de chaque boîte, en mémoire, sans pouvoir le lire ni savoir à qui il est."""
+
+    def __init__(self, clock=time.time):
+        self.clock = clock
+        self.boxes = {}      # boîte → (paquet, moment du dépôt)
+
+    def put(self, box, blob):
+        if not BOX.fullmatch(str(box or "")) or not isinstance(blob, bytes) or not blob.startswith(b"OSC2"):
+            raise ValueError("chiffres invalides")
+        if len(blob) > MAX_FIGURES:
+            raise ValueError("chiffres trop lourds")
+        self.boxes[box] = (blob, self.clock())
+        while len(self.boxes) > MAX_BOXES:
+            del self.boxes[min(self.boxes, key=lambda b: self.boxes[b][1])]
+
+    def get(self, boxes):
+        return {b: self.boxes[b][0] for b in boxes if b in self.boxes}
+
+
 class Mailbox:
     def __init__(self, cond, clock=time.time):
         self.cond = cond     # verrou partagé avec la ligne ouverte des relais (Tunnel.lock)

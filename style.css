@@ -1254,3 +1254,45 @@ body::before {
 .tk-pair-msg {
   margin: 6px 0 0;
 }
+
+/* Chiffres d'Orbis (chiffres.js) : 7 onglets quand l'onglet est là. */
+.views:has(button[data-view='chiffres']:not([hidden])) {
+  grid-template-columns: repeat(7, 1fr);
+  padding-left: max(2px, calc((100vw - 560px) / 2));
+  padding-right: max(2px, calc((100vw - 560px) / 2));
+}
+.ch-cities {
+  margin: 12px 0 4px;
+}
+.ch-city {
+  margin: 8px 0 2px;
+  color: var(--gold);
+}
+.ch-old {
+  color: var(--down);
+  font-weight: 600;
+}
+.ch-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 9px 0;
+  border-bottom: 1px solid var(--line);
+  font-size: 15px;
+}
+.ch-row:last-child {
+  border-bottom: 0;
+}
+.ch-row b {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.ch-margin b {
+  color: var(--up);
+}
+.ch-margin.ch-neg b {
+  color: var(--down);
+}
+.views button[hidden] {
+  display: none;
+}

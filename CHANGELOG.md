@@ -1,5 +1,16 @@
 # Historique
 
+## 20/11/2026 — Chiffres d'Orbis sur le téléphone
+
+- Onglet « Chiffres », seulement sur un téléphone à qui Sylvian l'a ouvert dans Orbis (Réglages ›
+  Téléphones) : ville au choix (retenue), aujourd'hui et mois en cours ; achats (nombre, poids,
+  « Achats taxe comprise », « Net payé aux clients »), marge théorique, ventes HT et TTC, marge
+  réelle (négative en rouge), seulement les blocs autorisés ; heure de mise à jour, en rouge
+  au-delà de 30 minutes.
+- Le relais du PC chiffre les chiffres avec une clé tirée du secret de ce téléphone (jumelage des
+  tickets) et les dépose dans sa boîte : Orbismini (tickets_boite.Figures) garde le dernier paquet,
+  en mémoire, sans pouvoir le lire ni savoir à qui il est. Le plus récent des PC l'emporte.
+
 ## 20/11/2026 — Thèmes Onyx et Perle, comme dans Orbis
 
 - Menu « Thème » en bas de l'écran des cours : Saphir (d'origine), Onyx et Perle (clair), avec

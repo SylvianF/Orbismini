@@ -12,11 +12,11 @@
     <link rel="icon" type="image/svg+xml" href="icon.svg" />
     <link rel="apple-touch-icon" href="icon.png" />
     <title>Orbismini</title>
-    <link rel="stylesheet" href="style.css?v=20261120-themes" />
-    <link rel="stylesheet" href="estimation.css?v=20261120-themes" />
-    <link rel="stylesheet" href="print.css?v=20261120-themes" />
+    <link rel="stylesheet" href="style.css?v=20261120-chiffres" />
+    <link rel="stylesheet" href="estimation.css?v=20261120-chiffres" />
+    <link rel="stylesheet" href="print.css?v=20261120-chiffres" />
     <!-- Thèmes Saphir / Onyx / Perle, repris d'Orbis : juste après les feuilles. -->
-    <script src="theme.js?v=20261120-themes"></script>
+    <script src="theme.js?v=20261120-chiffres"></script>
   </head>
   <body data-view="cours">
     <div id="pull-indicator" aria-hidden="true">
@@ -91,6 +91,12 @@
             <path d="M4 21V5a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v16M3 21h12M6 9h6" />
             <path d="M14 11h2a1.5 1.5 0 0 1 1.5 1.5v4a1.5 1.5 0 0 0 3 0V8l-3-3" /></svg
           >Ticket
+        </button>
+        <!-- Chiffres d'Orbis (chiffres.js) : seulement sur un téléphone qui en reçoit. -->
+        <button type="button" data-view="chiffres" aria-pressed="false" hidden>
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M4 20h16M7 16v-5M12 16V7M17 16v-8" /></svg
+          >Chiffres
         </button>
       </nav>
 
@@ -193,6 +199,9 @@
         <section class="section ga" id="gold-alert" aria-label="Alerte de cours" hidden></section>
       </div>
 
+      <!-- Chiffres d'Orbis pour la ville choisie (chiffres.js). -->
+      <div id="view-chiffres" class="view" hidden></div>
+
       <!-- Ticket de carburant : photo, agence, montant, envoyé chiffré aux PC (ticket.js). -->
       <div id="view-ticket" class="view" hidden></div>
 
@@ -288,25 +297,26 @@
         </details>
       </section>
     </main>
-    <script src="fiscal.js?v=20261120-themes"></script>
-    <script src="freshness.js?v=20261120-themes"></script>
-    <script src="gold-chart.js?v=20261120-themes"></script>
-    <script src="app.js?v=20261120-themes"></script>
-    <script src="estimation.js?v=20261120-themes"></script>
-    <script src="silver.js?v=20261120-themes"></script>
-    <script src="cours-plus.js?v=20261120-themes"></script>
-    <script src="meteo.js?v=20261120-themes"></script>
-    <script src="alerte-cours.js?v=20261120-themes"></script>
-    <script src="orbiscan-cadre.js?v=20261120-themes"></script>
-    <script src="scan.js?v=20261120-themes"></script>
-    <script src="c3e.js?v=20261120-themes"></script>
-    <script src="mobile.js?v=20261120-themes"></script>
-    <script src="alignment.js?v=20261120-themes"></script>
-    <script src="quick-prices.js?v=20261120-themes"></script>
-    <script src="print.js?v=20261120-themes"></script>
-    <script src="edit-fields.js?v=20261120-themes"></script>
-    <script src="scan-feuille.js?v=20261120-themes"></script>
-    <script src="ticket.js?v=20261120-themes"></script>
-    <script src="update.js?v=20261120-themes"></script>
+    <script src="fiscal.js?v=20261120-chiffres"></script>
+    <script src="freshness.js?v=20261120-chiffres"></script>
+    <script src="gold-chart.js?v=20261120-chiffres"></script>
+    <script src="app.js?v=20261120-chiffres"></script>
+    <script src="estimation.js?v=20261120-chiffres"></script>
+    <script src="silver.js?v=20261120-chiffres"></script>
+    <script src="cours-plus.js?v=20261120-chiffres"></script>
+    <script src="meteo.js?v=20261120-chiffres"></script>
+    <script src="alerte-cours.js?v=20261120-chiffres"></script>
+    <script src="orbiscan-cadre.js?v=20261120-chiffres"></script>
+    <script src="scan.js?v=20261120-chiffres"></script>
+    <script src="c3e.js?v=20261120-chiffres"></script>
+    <script src="mobile.js?v=20261120-chiffres"></script>
+    <script src="alignment.js?v=20261120-chiffres"></script>
+    <script src="quick-prices.js?v=20261120-chiffres"></script>
+    <script src="print.js?v=20261120-chiffres"></script>
+    <script src="edit-fields.js?v=20261120-chiffres"></script>
+    <script src="scan-feuille.js?v=20261120-chiffres"></script>
+    <script src="ticket.js?v=20261120-chiffres"></script>
+    <script src="chiffres.js?v=20261120-chiffres"></script>
+    <script src="update.js?v=20261120-chiffres"></script>
   </body>
 </html>
