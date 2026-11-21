@@ -29,16 +29,17 @@ simulateur (artefact « captures-iphone » en bas de la page de la tâche, donn�
 
 Ne colle jamais une clé dans une conversation : chaque clé va directement à l’endroit indiqué.
 
-### Maintenant
+### Compte Apple Developer
 
-Rien. L’inscription au programme Apple Developer (99 € par an) : developer.apple.com → Account →
-Enroll. Compte « Individual » à ton nom, ou « Organization » au nom de la société (il faut alors
-son numéro D-U-N-S). Apple met de quelques heures à quelques jours pour valider.
+Fait (compte individuel, « Abonnement confirmé » reçu). Pour vérifier qu’il est bien actif :
+sur le PC, developer.apple.com → Account (connexion avec ton identifiant Apple) → la page
+affiche « Apple Developer Program » avec une date d’expiration dans un an. Sur l’iPhone, l’app
+Apple Developer → Compte montre la même chose.
 
-### Dès que le compte Apple est validé
+### Maintenant que le compte est actif (sur le PC, dans le navigateur)
 
-1. **Identifiant d’équipe** (Team ID, 10 caractères) : developer.apple.com → Account →
-   Membership details.
+1. **Identifiant d’équipe** (Team ID, 10 caractères, lettres et chiffres) : developer.apple.com →
+   Account → Membership details → « Team ID ».
 2. **Clé API App Store Connect** (pour que GitHub signe et envoie l’application) :
    appstoreconnect.apple.com → Utilisateurs et accès → Intégrations → Clés de l’API
    App Store Connect → « + ». Nom : GitHub ; accès : **Admin**. Note l’**ID de la clé** et

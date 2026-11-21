@@ -81,24 +81,40 @@ struct MeteoView: View {
                 }
             }
             if let score = w.score { ScoreBar(score: score) }
-            HStack(spacing: 14) {
-                Label("\(w.up ?? 0) haussier" + ((w.up ?? 0) > 1 ? "s" : ""), systemImage: "arrowtriangle.up.fill")
-                    .foregroundStyle(Theme.up)
-                Label("\(w.down ?? 0) baissier" + ((w.down ?? 0) > 1 ? "s" : ""), systemImage: "arrowtriangle.down.fill")
-                    .foregroundStyle(Theme.down)
-                Label("\(w.flat ?? 0) neutre" + ((w.flat ?? 0) > 1 ? "s" : ""), systemImage: "minus")
-                    .foregroundStyle(Theme.muted)
+            counts(w)
+            if let line = Self.agitation(w) {
+                Text(line).font(.footnote).foregroundStyle(Theme.muted)
             }
-            .font(.footnote.weight(.semibold))
-            if let a = w.agitation, let level = a.level {
-                Text("Agitation du marché : " + level + (a.percent.map { " (" + Fmt.decimal($0, digits: 2) + " % par jour)" } ?? ""))
-                    .font(.footnote).foregroundStyle(Theme.muted)
-            }
-            if let missing = w.missing, !missing.isEmpty {
-                Text("Sans réponse pour l’instant : " + missing.joined(separator: ", ") + " (nouvel essai dans 5 min)")
-                    .font(.caption).foregroundStyle(Theme.down)
+            if let line = Self.missing(w) {
+                Text(line).font(.caption).foregroundStyle(Theme.down)
             }
         }
+    }
+
+    private func counts(_ w: Weather) -> some View {
+        HStack(spacing: 14) {
+            Label(Self.count(w.up, "haussier"), systemImage: "arrowtriangle.up.fill").foregroundStyle(Theme.up)
+            Label(Self.count(w.down, "baissier"), systemImage: "arrowtriangle.down.fill").foregroundStyle(Theme.down)
+            Label(Self.count(w.flat, "neutre"), systemImage: "minus").foregroundStyle(Theme.muted)
+        }
+        .font(.footnote.weight(.semibold))
+    }
+
+    private static func count(_ n: Int?, _ word: String) -> String {
+        let n = n ?? 0
+        return "\(n) " + word + (n > 1 ? "s" : "")
+    }
+
+    private static func agitation(_ w: Weather) -> String? {
+        guard let a = w.agitation, let level = a.level else { return nil }
+        var line = "Agitation du marché : " + level
+        if let p = a.percent { line += " (" + Fmt.decimal(p, digits: 2) + " % par jour)" }
+        return line
+    }
+
+    private static func missing(_ w: Weather) -> String? {
+        guard let missing = w.missing, !missing.isEmpty else { return nil }
+        return "Sans réponse pour l’instant : " + missing.joined(separator: ", ") + " (nouvel essai dans 5 min)"
     }
 
     private func history(_ days: [Weather.Day], today: Weather.Sky?) -> some View {
