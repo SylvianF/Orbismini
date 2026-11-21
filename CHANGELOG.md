@@ -1,5 +1,12 @@
 # Historique
 
+## 21/11/2026 — Chiffres : détail objet par objet du jour
+
+- Aujourd'hui et Hier : les lignes « Achats » et « Ventes » se déroulent et montrent chaque objet,
+  comme le survol de l'Accueil d'Orbis (achats : article, titre, poids, heure, taxe comprise, net
+  payé, GtaX, marge théorique ; ventes : article, date d'achat, vente TTC, marge HT). Seulement si
+  Orbis envoie ce détail (lignes `lines`), selon les droits du téléphone.
+
 ## 20/11/2026 — Plus de vide à faire défiler sur les écrans courts
 
 - La page fait au moins la hauteur de l'écran, sans plus (avant : chaque onglet faisait la hauteur
