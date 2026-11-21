@@ -1,0 +1,84 @@
+# Application iPhone vers TestFlight : lancée à la main (onglet Actions → « Application iPhone →
+# TestFlight » → Run workflow), une fois le compte Apple Developer prêt.
+# Secrets du dépôt (Settings → Secrets and variables → Actions), saisis par Sylvian :
+#   APPLE_TEAM_ID     identifiant d’équipe Apple (10 caractères)
+#   ASC_KEY_ID        identifiant de la clé API App Store Connect (10 caractères)
+#   ASC_ISSUER_ID     identifiant de l’émetteur (Issuer ID, de la forme 1a2b3c4d-…)
+#   ASC_KEY_P8        contenu du fichier AuthKey_XXXXXXXXXX.p8 de cette clé
+# Signature automatique par Xcode (certificat et profils fabriqués avec la clé API), puis envoi
+# direct à TestFlight. Rien n’est gardé : la clé est effacée à la fin de la tâche.
+name: Application iPhone → TestFlight
+on:
+  workflow_dispatch:
+jobs:
+  testflight:
+    runs-on: macos-15
+    timeout-minutes: 60
+    defaults:
+      run:
+        working-directory: ios
+    env:
+      TEAM: ${{ secrets.APPLE_TEAM_ID }}
+      KEY_ID: ${{ secrets.ASC_KEY_ID }}
+      ISSUER: ${{ secrets.ASC_ISSUER_ID }}
+    steps:
+      - name: Secrets présents ?
+        working-directory: .
+        run: |
+          missing=""
+          for v in APPLE_TEAM_ID ASC_KEY_ID ASC_ISSUER_ID ASC_KEY_P8; do
+            [ -n "$(printenv "S_$v")" ] || missing="$missing $v"
+          done
+          if [ -n "$missing" ]; then echo "::error::Secrets manquants :$missing"; exit 1; fi
+        env:
+          S_APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          S_ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          S_ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          S_ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
+      - uses: actions/checkout@v4
+      - uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+      - name: Clé API App Store Connect
+        env:
+          KEY_P8: ${{ secrets.ASC_KEY_P8 }}
+        run: |
+          mkdir -p "$RUNNER_TEMP/cles"
+          printf '%s\n' "$KEY_P8" > "$RUNNER_TEMP/cles/AuthKey_$KEY_ID.p8"
+          chmod 600 "$RUNNER_TEMP/cles/AuthKey_$KEY_ID.p8"
+      - name: XcodeGen
+        run: |
+          brew install xcodegen
+          xcodegen generate
+      - name: Archive signée
+        run: |
+          xcodebuild archive \
+            -project Orbismini.xcodeproj -scheme Orbismini -configuration Release \
+            -destination "generic/platform=iOS" -archivePath build/Orbismini.xcarchive \
+            -allowProvisioningUpdates \
+            -authenticationKeyPath "$RUNNER_TEMP/cles/AuthKey_$KEY_ID.p8" \
+            -authenticationKeyID "$KEY_ID" -authenticationKeyIssuerID "$ISSUER" \
+            DEVELOPMENT_TEAM="$TEAM" CURRENT_PROJECT_VERSION="${{ github.run_number }}"
+      - name: Envoi à TestFlight
+        run: |
+          cat > build/ExportOptions.plist <<EOF
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0"><dict>
+            <key>method</key><string>app-store-connect</string>
+            <key>destination</key><string>upload</string>
+            <key>teamID</key><string>$TEAM</string>
+            <key>signingStyle</key><string>automatic</string>
+            <key>manageAppVersionAndBuildNumber</key><false/>
+          </dict></plist>
+          EOF
+          xcodebuild -exportArchive \
+            -archivePath build/Orbismini.xcarchive -exportPath build/export \
+            -exportOptionsPlist build/ExportOptions.plist \
+            -allowProvisioningUpdates \
+            -authenticationKeyPath "$RUNNER_TEMP/cles/AuthKey_$KEY_ID.p8" \
+            -authenticationKeyID "$KEY_ID" -authenticationKeyIssuerID "$ISSUER"
+      - name: Effacer la clé
+        if: always()
+        working-directory: .
+        run: rm -rf "$RUNNER_TEMP/cles"
