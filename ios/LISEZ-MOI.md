@@ -1,6 +1,6 @@
 # Orbismini pour iPhone (application native)
 
-Branche `app-ios` seulement : rien ici ne change le site (main reste ce que Render met en ligne).
+Dépôt SylvianF/Orbismini, branche `app-ios` seulement : rien ici ne change le site (main reste ce que Render met en ligne).
 
 ## Ce qu’il y a
 
@@ -46,7 +46,7 @@ heures à deux jours ; au-delà : developer.apple.com → Support → Nous conta
    App Store Connect → « + ». Nom : GitHub ; accès : **Admin**. Note l’**ID de la clé** et
    l’**ID de l’émetteur** (Issuer ID, en haut de la page), puis télécharge le fichier
    `AuthKey_XXXXXXXXXX.p8` (téléchargeable une seule fois : range-le à l’abri).
-3. **Secrets GitHub** : github.com/Tawek8/mon-cours-or → Settings → Secrets and variables →
+3. **Secrets GitHub** : github.com/SylvianF/Orbismini → Settings → Secrets and variables →
    Actions → « New repository secret », quatre fois :
    - `APPLE_TEAM_ID` : l’identifiant d’équipe ;
    - `ASC_KEY_ID` : l’ID de la clé ;
@@ -57,7 +57,7 @@ heures à deux jours ; au-delà : developer.apple.com → Support → Nous conta
    iOS, nom « Orbismini », langue Français, identifiant `fr.cndo.orbismini`, référence
    « orbismini ». Si l’identifiant n’est pas dans la liste : lance d’abord la tâche TestFlight
    une fois (elle le déclare chez Apple, puis échoue à l’envoi), puis crée la fiche et relance.
-5. **Envoi** : github.com/Tawek8/mon-cours-or → Actions → « Application iPhone → TestFlight » →
+5. **Envoi** : github.com/SylvianF/Orbismini → Actions → « Application iPhone → TestFlight » →
    Run workflow (branche `app-ios`). Après le traitement par Apple (10 à 30 minutes), installe
    l’app **TestFlight** sur l’iPhone : Orbismini y paraît. Ajoute l’autre iPhone comme testeur
    (App Store Connect → TestFlight → Testeurs internes).
