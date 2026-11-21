@@ -23,41 +23,10 @@ struct CourseChart: View {
 
     var body: some View {
         Chart {
-            if let first = points.first {
-                RuleMark(y: .value("Début", first.price))
-                    .foregroundStyle(Theme.muted.opacity(0.35))
-                    .lineStyle(StrokeStyle(lineWidth: 1, dash: [3, 3]))
-            }
-            ForEach(points, id: \.date) { p in
-                AreaMark(x: .value("Moment", p.date),
-                         yStart: .value("Bas", low - pad),
-                         yEnd: .value("Cours", p.price))
-                    .foregroundStyle(LinearGradient(colors: [color.opacity(0.26), color.opacity(0.02)],
-                                                    startPoint: .top, endPoint: .bottom))
-                LineMark(x: .value("Moment", p.date), y: .value("Cours", p.price))
-                    .foregroundStyle(color)
-                    .lineStyle(StrokeStyle(lineWidth: 2, lineCap: .round, lineJoin: .round))
-            }
-            if let last = points.last, selectedPoint == nil {
-                PointMark(x: .value("Moment", last.date), y: .value("Cours", last.price))
-                    .foregroundStyle(color)
-                    .symbolSize(36)
-            }
-            if let p = selectedPoint {
-                RuleMark(x: .value("Moment", p.date))
-                    .foregroundStyle(Theme.muted.opacity(0.6))
-                    .annotation(position: .top, spacing: 2, overflowResolution: .init(x: .fit(to: .chart), y: .disabled)) {
-                        VStack(spacing: 0) {
-                            Text(Fmt.euros(p.price)).font(.caption.bold()).foregroundStyle(Theme.text)
-                            Text(label(p.date)).font(.caption2).foregroundStyle(Theme.muted)
-                        }
-                        .padding(.horizontal, 6).padding(.vertical, 3)
-                        .background(Theme.bg2.opacity(0.92), in: RoundedRectangle(cornerRadius: 6))
-                    }
-                PointMark(x: .value("Moment", p.date), y: .value("Cours", p.price))
-                    .foregroundStyle(color)
-                    .symbolSize(50)
-            }
+            baseLine
+            curve
+            lastPoint
+            selectionMarks
         }
         .chartYScale(domain: (low - pad)...(high + pad))
         .chartXScale(domain: (points.first?.date ?? Date())...(points.last?.date ?? Date()))
@@ -84,7 +53,67 @@ struct CourseChart: View {
         }
         .accessibilityElement()
         .accessibilityLabel("Courbe sur " + period.label)
-        .accessibilityValue(points.last.map { "Dernier cours " + Fmt.euros($0.price) } ?? "")
+        .accessibilityValue(lastLabel)
+    }
+
+    private var lastLabel: String {
+        guard let last = points.last else { return "" }
+        return "Dernier cours " + Fmt.euros(last.price)
+    }
+
+    private var fill: LinearGradient {
+        LinearGradient(colors: [color.opacity(0.26), color.opacity(0.02)], startPoint: .top, endPoint: .bottom)
+    }
+
+    @ChartContentBuilder
+    private var baseLine: some ChartContent {
+        if let first = points.first {
+            RuleMark(y: .value("Début", first.price))
+                .foregroundStyle(Theme.muted.opacity(0.35))
+                .lineStyle(StrokeStyle(lineWidth: 1, dash: [3, 3]))
+        }
+    }
+
+    private var curve: some ChartContent {
+        ForEach(points, id: \.date) { p in
+            AreaMark(x: .value("Moment", p.date), yStart: .value("Bas", low - pad), yEnd: .value("Cours", p.price))
+                .foregroundStyle(fill)
+            LineMark(x: .value("Moment", p.date), y: .value("Cours", p.price))
+                .foregroundStyle(color)
+                .lineStyle(StrokeStyle(lineWidth: 2, lineCap: .round, lineJoin: .round))
+        }
+    }
+
+    @ChartContentBuilder
+    private var lastPoint: some ChartContent {
+        if let last = points.last, selectedPoint == nil {
+            PointMark(x: .value("Moment", last.date), y: .value("Cours", last.price))
+                .foregroundStyle(color)
+                .symbolSize(36)
+        }
+    }
+
+    @ChartContentBuilder
+    private var selectionMarks: some ChartContent {
+        if let p = selectedPoint {
+            RuleMark(x: .value("Moment", p.date))
+                .foregroundStyle(Theme.muted.opacity(0.6))
+                .annotation(position: .top, spacing: 2, overflowResolution: .init(x: .fit(to: .chart), y: .disabled)) {
+                    bubble(p)
+                }
+            PointMark(x: .value("Moment", p.date), y: .value("Cours", p.price))
+                .foregroundStyle(color)
+                .symbolSize(50)
+        }
+    }
+
+    private func bubble(_ p: PricePoint) -> some View {
+        VStack(spacing: 0) {
+            Text(Fmt.euros(p.price)).font(.caption.bold()).foregroundStyle(Theme.text)
+            Text(label(p.date)).font(.caption2).foregroundStyle(Theme.muted)
+        }
+        .padding(.horizontal, 6).padding(.vertical, 3)
+        .background(Theme.bg2.opacity(0.92), in: RoundedRectangle(cornerRadius: 6))
     }
 
     private func axisLabel(_ d: Date) -> String {

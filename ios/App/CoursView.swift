@@ -61,40 +61,7 @@ struct CoursView: View {
     var body: some View {
         NavigationStack {
             ScrollView {
-                VStack(alignment: .leading, spacing: 14) {
-                    StatusLine(status: model.status)
-
-                    Picker("Période", selection: Binding(get: { model.period }, set: { p in Task { await model.choose(p) } })) {
-                        ForEach(Period.allCases) { Text($0.short).tag($0) }
-                    }
-                    .pickerStyle(.segmented)
-
-                    ForEach(Metal.allCases) { metal in
-                        MetalCard(series: model.snapshot?.series(metal), metal: metal, period: model.period,
-                                  marketClosed: metal == .gold && (model.snapshot?.gold.marketClosed ?? false))
-                    }
-
-                    Button { app.showAlert = true } label: {
-                        Label("Alerte de cours", systemImage: "bell.badge")
-                            .frame(maxWidth: .infinity)
-                    }
-                    .buttonStyle(.borderedProminent)
-                    .foregroundStyle(Theme.bg2)
-                    .controlSize(.large)
-
-                    NavigationLink {
-                        WebModuleView(view: "cours", title: "Pièces et lingots")
-                    } label: {
-                        Label("Pièces, lingots et prix de rachat", systemImage: "list.bullet")
-                            .frame(maxWidth: .infinity)
-                    }
-                    .buttonStyle(.bordered)
-                    .controlSize(.large)
-
-                    Text("Courbes : BullionVault. Or pur : Kitco (Bid), BullionVault en secours.")
-                        .font(.caption2)
-                        .foregroundStyle(Theme.muted)
-                }
+                content
                 .padding(16)
             }
             .orbisminiBackground()
@@ -118,6 +85,47 @@ struct CoursView: View {
             }
         }
     }
+
+    private var content: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            StatusLine(status: model.status)
+
+            Picker("Période", selection: periodBinding) {
+                ForEach(Period.allCases) { Text($0.short).tag($0) }
+            }
+            .pickerStyle(.segmented)
+
+            ForEach(Metal.allCases) { metal in
+                MetalCard(series: model.snapshot?.series(metal), metal: metal, period: model.period,
+                          marketClosed: metal == .gold && (model.snapshot?.gold.marketClosed ?? false))
+            }
+
+            Button { app.showAlert = true } label: {
+                Label("Alerte de cours", systemImage: "bell.badge")
+                    .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(.borderedProminent)
+            .foregroundStyle(Theme.bg2)
+            .controlSize(.large)
+
+            NavigationLink {
+                WebModuleView(view: "cours", title: "Pièces et lingots")
+            } label: {
+                Label("Pièces, lingots et prix de rachat", systemImage: "list.bullet")
+                    .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(.bordered)
+            .controlSize(.large)
+
+            Text("Courbes : BullionVault. Or pur : Kitco (Bid), BullionVault en secours.")
+                .font(.caption2)
+                .foregroundStyle(Theme.muted)
+        }
+    }
+
+    private var periodBinding: Binding<Period> {
+        Binding(get: { model.period }, set: { p in Task { await model.choose(p) } })
+    }
 }
 
 private struct MetalCard: View {
@@ -126,12 +134,25 @@ private struct MetalCard: View {
     let period: Period
     let marketClosed: Bool
 
+    private static func sourceLine(_ s: MetalSeries) -> String? {
+        guard let source = s.source else { return nil }
+        guard let d = s.quotedAt else { return "Cours : " + source }
+        return "Cours : " + source + " · " + Fmt.dayTime(d)
+    }
+
+    private var variationLine: String {
+        guard let series else { return "" }
+        return Fmt.variation(series, withAmount: true) + " sur " + period.label
+    }
+
+    private var color: Color { metal == .gold ? Theme.gold : Theme.silver }
+
     var body: some View {
         Card {
             HStack(alignment: .firstTextBaseline) {
                 Text(metal.title)
                     .font(.headline)
-                    .foregroundStyle(metal == .gold ? Theme.gold : Theme.silver)
+                    .foregroundStyle(color)
                 Spacer()
                 if marketClosed {
                     Text("Marché fermé").font(.caption).foregroundStyle(Theme.muted)
@@ -142,17 +163,16 @@ private struct MetalCard: View {
                     .font(.system(size: 34, weight: .bold, design: .rounded))
                     .foregroundStyle(Theme.text)
                     .contentTransition(.numericText())
-                Text(Fmt.variation(series, withAmount: true) + " sur " + period.label)
+                Text(variationLine)
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(Theme.trend(series.delta))
                 if series.hasCurve {
-                    CourseChart(points: series.points, color: metal == .gold ? Theme.gold : Theme.silver,
+                    CourseChart(points: series.points, color: color,
                                 showLabels: true, interactive: true, period: period)
                         .frame(height: 170)
                 }
-                if let source = series.source {
-                    Text("Cours : " + source + (series.quotedAt.map { " · " + Fmt.dayTime($0) } ?? ""))
-                        .font(.caption2).foregroundStyle(Theme.muted)
+                if let line = Self.sourceLine(series) {
+                    Text(line).font(.caption2).foregroundStyle(Theme.muted)
                 }
             } else if let error = series?.error {
                 Text("Cours indisponible").font(.title3.bold()).foregroundStyle(Theme.muted)

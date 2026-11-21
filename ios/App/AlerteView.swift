@@ -80,53 +80,10 @@ struct AlerteView: View {
 
     var body: some View {
         Form {
-            if let price = model.state?.price {
-                Section {
-                    LabeledContent("Cours actuel", value: Fmt.kilo(price))
-                } footer: {
-                    Text("Or pur, BullionVault. Le serveur contrôle le cours toutes les 10 minutes en semaine.")
-                }
-            }
-            Section {
-                field("Au-dessus de", text: $model.above, unit: "€/kg", hint: "121 000")
-                field("En dessous de", text: $model.below, unit: "€/kg", hint: "112 000")
-                field("Variation sur 24 h", text: $model.move, unit: "%", hint: "2")
-            } header: {
-                Text(model.state?.mode == "orbis" ? "Alerte commune avec Orbis" : "Alerte de ce téléphone")
-            } footer: {
-                Text("Un seuil passé sonne une fois puis s’efface. La variation reste en place (une alerte par sens toutes les 20 heures au plus).")
-            }
-            Section {
-                Button {
-                    Task { await model.save() }
-                } label: {
-                    HStack {
-                        Text("Enregistrer l’alerte").bold()
-                        Spacer()
-                        if model.busy { ProgressView() }
-                    }
-                }
-                .disabled(model.busy)
-                if model.state?.isActive == true {
-                    Button("Retirer l’alerte", role: .destructive) { Task { await model.save(clear: true) } }
-                        .disabled(model.busy)
-                }
-                if let message = model.message {
-                    Text(message).font(.footnote).foregroundStyle(model.bad ? Theme.down : Theme.up)
-                }
-            }
-            if let hits = model.state?.hits, !hits.isEmpty {
-                Section("Dernières alertes") {
-                    ForEach(Array(hits.reversed().prefix(5))) { h in
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(h.title).font(.subheadline)
-                            Text((h.price.map { "Cours " + Fmt.kilo($0) } ?? "")
-                                 + (DateParser.parse(h.at).map { " · " + Fmt.dayTime($0) } ?? ""))
-                                .font(.caption).foregroundStyle(Theme.muted)
-                        }
-                    }
-                }
-            }
+            priceSection
+            settingsSection
+            actionsSection
+            hitsSection
             notifications
         }
         .orbisminiBackground()
@@ -134,6 +91,78 @@ struct AlerteView: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Fermer") { dismiss() } } }
         .task { await model.load() }
+    }
+
+    @ViewBuilder
+    private var priceSection: some View {
+        if let price = model.state?.price {
+            Section {
+                LabeledContent("Cours actuel", value: Fmt.kilo(price))
+            } footer: {
+                Text("Or pur, BullionVault. Le serveur contrôle le cours toutes les 10 minutes en semaine.")
+            }
+        }
+    }
+
+    private var settingsTitle: String {
+        model.state?.mode == "orbis" ? "Alerte commune avec Orbis" : "Alerte de ce téléphone"
+    }
+
+    private var settingsSection: some View {
+        Section {
+            field("Au-dessus de", text: $model.above, unit: "€/kg", hint: "121 000")
+            field("En dessous de", text: $model.below, unit: "€/kg", hint: "112 000")
+            field("Variation sur 24 h", text: $model.move, unit: "%", hint: "2")
+        } header: {
+            Text(settingsTitle)
+        } footer: {
+            Text("Un seuil passé sonne une fois puis s’efface. La variation reste en place (une alerte par sens toutes les 20 heures au plus).")
+        }
+    }
+
+    private var actionsSection: some View {
+        Section {
+            Button {
+                Task { await model.save() }
+            } label: {
+                HStack {
+                    Text("Enregistrer l’alerte").bold()
+                    Spacer()
+                    if model.busy { ProgressView() }
+                }
+            }
+            .disabled(model.busy)
+            if model.state?.isActive == true {
+                Button("Retirer l’alerte", role: .destructive) { Task { await model.save(clear: true) } }
+                    .disabled(model.busy)
+            }
+            if let message = model.message {
+                Text(message).font(.footnote).foregroundStyle(model.bad ? Theme.down : Theme.up)
+            }
+        }
+    }
+
+    private var lastHits: [AlertState.Hit] { Array((model.state?.hits ?? []).reversed().prefix(5)) }
+
+    @ViewBuilder
+    private var hitsSection: some View {
+        if !lastHits.isEmpty {
+            Section("Dernières alertes") {
+                ForEach(lastHits) { h in
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(h.title).font(.subheadline)
+                        Text(Self.detail(h)).font(.caption).foregroundStyle(Theme.muted)
+                    }
+                }
+            }
+        }
+    }
+
+    private static func detail(_ h: AlertState.Hit) -> String {
+        var parts: [String] = []
+        if let p = h.price { parts.append("Cours " + Fmt.kilo(p)) }
+        if let d = DateParser.parse(h.at) { parts.append(Fmt.dayTime(d)) }
+        return parts.joined(separator: " · ")
     }
 
     @ViewBuilder

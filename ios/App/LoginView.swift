@@ -72,45 +72,61 @@ struct LoginView: View {
                 .background(Theme.bg2)
                 .ignoresSafeArea()
             VStack(spacing: 16) {
-                Image("Logo")
-                    .resizable()
-                    .frame(width: 84, height: 84)
-                    .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
-                    .shadow(color: .black.opacity(0.5), radius: 20, y: 10)
-                (Text("Orbis").foregroundStyle(Theme.gold) + Text("mini").foregroundStyle(Theme.text))
-                    .font(.system(size: 28, weight: .semibold))
-                Text("Saisis le mot de passe pour ouvrir l’application.")
-                    .font(.subheadline)
-                    .foregroundStyle(Theme.muted)
-                    .multilineTextAlignment(.center)
-                SecureField("Mot de passe", text: $model.password)
-                    .textContentType(.password)
-                    .multilineTextAlignment(.center)
-                    .padding(14)
-                    .background(Color(hex: 0x101C24), in: RoundedRectangle(cornerRadius: 12))
-                    .overlay(RoundedRectangle(cornerRadius: 12).stroke(focused ? Theme.gold : Theme.line, lineWidth: focused ? 2 : 1))
-                    .focused($focused)
-                    .submitLabel(.go)
-                    .onSubmit(go)
+                header
+                passwordField
                 if let error = model.error {
                     Text(error).font(.subheadline).foregroundStyle(Color(hex: 0xFFB3AD))
                 }
-                Button(action: go) {
-                    HStack {
-                        if model.status == .loading || model.status == .waking { ProgressView().tint(Theme.bg2) }
-                        Text("Ouvrir").bold()
-                    }
-                    .frame(maxWidth: .infinity, minHeight: 50)
-                }
-                .background(Theme.gold, in: RoundedRectangle(cornerRadius: 12))
-                .foregroundStyle(Color(hex: 0x18242B))
-                .disabled(model.password.isEmpty || model.status == .loading || model.status == .waking)
+                openButton
                 if model.status == .waking { StatusLine(status: .waking) }
             }
             .frame(maxWidth: 340)
             .padding(.horizontal, 16)
         }
         .onAppear { focused = Config.startScreen != "connexion" }
+    }
+
+    private var busy: Bool { model.status == .loading || model.status == .waking }
+
+    private var header: some View {
+        VStack(spacing: 12) {
+            Image("Logo")
+                .resizable()
+                .frame(width: 84, height: 84)
+                .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+                .shadow(color: .black.opacity(0.5), radius: 20, y: 10)
+            (Text("Orbis").foregroundColor(Theme.gold) + Text("mini").foregroundColor(Theme.text))
+                .font(.system(size: 28, weight: .semibold))
+            Text("Saisis le mot de passe pour ouvrir l’application.")
+                .font(.subheadline)
+                .foregroundStyle(Theme.muted)
+                .multilineTextAlignment(.center)
+        }
+    }
+
+    private var passwordField: some View {
+        SecureField("Mot de passe", text: $model.password)
+            .textContentType(.password)
+            .multilineTextAlignment(.center)
+            .padding(14)
+            .background(Color(hex: 0x101C24), in: RoundedRectangle(cornerRadius: 12))
+            .overlay(RoundedRectangle(cornerRadius: 12).stroke(focused ? Theme.gold : Theme.line, lineWidth: focused ? 2 : 1))
+            .focused($focused)
+            .submitLabel(.go)
+            .onSubmit(go)
+    }
+
+    private var openButton: some View {
+        Button(action: go) {
+            HStack {
+                if busy { ProgressView().tint(Theme.bg2) }
+                Text("Ouvrir").bold()
+            }
+            .frame(maxWidth: .infinity, minHeight: 50)
+        }
+        .background(Theme.gold, in: RoundedRectangle(cornerRadius: 12))
+        .foregroundStyle(Color(hex: 0x18242B))
+        .disabled(model.password.isEmpty || busy)
     }
 
     private func go() {

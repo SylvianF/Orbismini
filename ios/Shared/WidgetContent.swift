@@ -32,51 +32,68 @@ struct WidgetContent: View {
     var body: some View {
         if let snapshot {
             switch size {
-            case .small:
-                VStack(alignment: .leading, spacing: 2) {
-                    MetalBlock(series: snapshot.series(metal), metal: metal, compact: true)
-                    if snapshot.series(metal).hasCurve {
-                        CourseChart(points: snapshot.series(metal).points, color: color(metal), showLabels: false)
-                            .padding(.top, 4)
-                    }
-                    Spacer(minLength: 0)
-                    Footer(snapshot: snapshot, metal: metal, stale: stale)
-                }
-            case .medium:
-                VStack(alignment: .leading, spacing: 4) {
-                    HStack(spacing: 8) {
-                        MetalBlock(series: snapshot.series(metal), metal: metal, compact: false)
-                            .frame(width: 118, alignment: .leading)
-                        if snapshot.series(metal).hasCurve {
-                            CourseChart(points: snapshot.series(metal).points, color: color(metal))
-                        }
-                    }
-                    .frame(maxHeight: .infinity)
-                    Footer(snapshot: snapshot, metal: metal, stale: stale)
-                }
-            case .large:
-                VStack(alignment: .leading, spacing: 4) {
-                    ForEach(Metal.allCases) { m in
-                        MetalBlock(series: snapshot.series(m), metal: m, compact: false)
-                        if snapshot.series(m).hasCurve {
-                            CourseChart(points: snapshot.series(m).points, color: color(m))
-                        }
-                        if m == .gold { Spacer(minLength: 6) }
-                    }
-                    Footer(snapshot: snapshot, metal: metal, stale: stale)
-                }
+            case .small: small(snapshot)
+            case .medium: medium(snapshot)
+            case .large: large(snapshot)
             }
         } else {
-            VStack(alignment: .leading, spacing: 4) {
-                Text("Orbismini").font(.system(size: 13, weight: .semibold)).foregroundStyle(Theme.gold)
-                Spacer().frame(height: 2)
-                Text("Cours indisponibles").font(.system(size: 12)).foregroundStyle(Theme.text)
-                Text(message ?? "Ouvre Orbismini une première fois, puis réessaie dans quelques minutes.")
-                    .font(.system(size: 10)).foregroundStyle(Theme.muted).minimumScaleFactor(0.6)
-                Spacer(minLength: 0)
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
+            unavailable
         }
+    }
+
+    private func small(_ s: Snapshot) -> some View {
+        let series = s.series(metal)
+        return VStack(alignment: .leading, spacing: 2) {
+            MetalBlock(series: series, metal: metal, compact: true)
+            if series.hasCurve {
+                CourseChart(points: series.points, color: color(metal), showLabels: false).padding(.top, 4)
+            }
+            Spacer(minLength: 0)
+            Footer(snapshot: s, metal: metal, stale: stale)
+        }
+    }
+
+    private func medium(_ s: Snapshot) -> some View {
+        let series = s.series(metal)
+        return VStack(alignment: .leading, spacing: 4) {
+            HStack(spacing: 8) {
+                MetalBlock(series: series, metal: metal, compact: false).frame(width: 118, alignment: .leading)
+                if series.hasCurve {
+                    CourseChart(points: series.points, color: color(metal))
+                }
+            }
+            .frame(maxHeight: .infinity)
+            Footer(snapshot: s, metal: metal, stale: stale)
+        }
+    }
+
+    private func large(_ s: Snapshot) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            metalRow(s.gold, .gold)
+            Spacer(minLength: 6)
+            metalRow(s.silver, .silver)
+            Footer(snapshot: s, metal: metal, stale: stale)
+        }
+    }
+
+    @ViewBuilder
+    private func metalRow(_ series: MetalSeries, _ m: Metal) -> some View {
+        MetalBlock(series: series, metal: m, compact: false)
+        if series.hasCurve {
+            CourseChart(points: series.points, color: color(m))
+        }
+    }
+
+    private var unavailable: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text("Orbismini").font(.system(size: 13, weight: .semibold)).foregroundStyle(Theme.gold)
+            Spacer().frame(height: 2)
+            Text("Cours indisponibles").font(.system(size: 12)).foregroundStyle(Theme.text)
+            Text(message ?? "Ouvre Orbismini une première fois, puis réessaie dans quelques minutes.")
+                .font(.system(size: 10)).foregroundStyle(Theme.muted).minimumScaleFactor(0.6)
+            Spacer(minLength: 0)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private func color(_ m: Metal) -> Color { m == .gold ? Theme.gold : Theme.silver }
@@ -115,9 +132,15 @@ private struct Footer: View {
     let metal: Metal
     let stale: Bool
 
+    private var line: String {
+        var out = stale ? "⚠ " : ""
+        out += snapshot.period.label + " · " + Fmt.time(snapshot.when(metal))
+        if metal == .gold && snapshot.gold.marketClosed { out += " · marché fermé" }
+        return out
+    }
+
     var body: some View {
-        let closed = metal == .gold && snapshot.gold.marketClosed
-        Text((stale ? "⚠ " : "") + snapshot.period.label + " · " + Fmt.time(snapshot.when(metal)) + (closed ? " · marché fermé" : ""))
+        Text(line)
             .font(.system(size: 9))
             .foregroundStyle(Theme.muted)
             .lineLimit(1)
