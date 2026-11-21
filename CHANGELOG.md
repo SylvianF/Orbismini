@@ -1,5 +1,11 @@
 # Historique
 
+## 21/11/2026 — Chiffres : un cadre par transaction
+
+- Détail du jour : un cadre par transaction (champ `cadre` d'Orbis 3.1.28, jamais affiché), avec
+  l'heure et le net payé additionné pour un achat, le total TTC pour une vente ; dedans, chaque
+  objet. Les envois restent sous « Envois ».
+
 ## 21/11/2026 — Chiffres : envois séparés dans le détail des ventes
 
 - Détail des ventes : ventes aux clients d'abord, puis « Envois » (GoldTrade, CNDO), pour que les

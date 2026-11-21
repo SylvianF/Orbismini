@@ -94,39 +94,59 @@
   // Lignes d'un bloc de chiffres ; group : un seul groupe (achats, marge, ventes, margeReelle).
   // source « exercice » (Mois, Mois préc., Année) : chiffres du tableau « Exercice comptable »
   // d'Orbis : achats HT, CA HT (envois compris), marge HT ; pas de TTC.
-  // Un objet acheté ou vendu (mêmes colonnes que le survol de l'Accueil d'Orbis).
+  // Détail du jour, un cadre par transaction (champ « cadre » d'Orbis, jamais affiché) : en tête
+  // l'heure (achats) et le total ; dedans, chaque objet (mêmes colonnes que l'Accueil d'Orbis).
   const time = iso => new Date(iso).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
   const fine = t => Number(t).toLocaleString('fr-FR', { maximumFractionDigits: 2 }) + ' ‰';
   const pct = v => Number(v).toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' %';
-  function objectCard(when, l, cells) {
+  const cell = ([k, v, cls]) => el('span', { className: cls || '' }, el('small', { textContent: k }), el('b', { textContent: v }));
+  function item(l, note, cells) {
     const name = (l.count > 1 ? l.count + ' × ' : '') + (l.article || l.description || 'Objet');
-    const facts = [l.titre ? fine(l.titre) : null, l.weight != null ? grams(l.weight) : null].filter(Boolean).join(' · ');
+    const facts = [l.titre ? fine(l.titre) : null, l.weight != null ? grams(l.weight) : null, note].filter(Boolean).join(' · ');
     return el(
       'div',
-      { className: 'ch-obj' },
-      el('div', { className: 'ch-obj-head' }, el('b', { textContent: name }), when ? el('small', { textContent: when }) : null),
+      { className: 'ch-item' },
+      el('b', { textContent: name }),
       l.description && l.description !== l.article ? el('small', { className: 'ch-obj-desc', textContent: l.description }) : null,
       facts ? el('small', { className: 'ch-obj-desc', textContent: facts }) : null,
-      el('div', { className: 'ch-obj-cells' }, ...cells.filter(c => c && c[1] != null).map(([k, v, cls]) => el('span', { className: cls || '' }, el('small', { textContent: k }), el('b', { textContent: v }))))
+      el('div', { className: 'ch-obj-cells' }, ...cells.filter(c => c && c[1] != null).map(cell))
     );
   }
-  const buyCard = l =>
-    objectCard(l.at ? time(l.at) : '', l, [
+  const buyItem = l =>
+    item(l, '', [
       ['Taxe comprise', l.gross != null ? euro(l.gross) : null],
       ['Net payé', l.net != null ? euro(l.net) : null],
       ['GtaX', l.gtax != null ? pct(l.gtax) : null],
       ['Marge théo.', l.theory != null ? euro(l.theory) : null, l.theory != null ? margin(l.theory) : ''],
     ]);
-  const saleCard = l =>
-    objectCard(
-      [l.to ? 'envoi à ' + l.to : '', l.purchaseDay ? 'acheté le ' + new Date(l.purchaseDay + 'T12:00').toLocaleDateString('fr-FR') : '']
-        .filter(Boolean)
-        .join(' · '),
-      l,
-      [
+  const saleItem = l =>
+    item(l, [l.to ? 'envoi à ' + l.to : '', l.purchaseDay ? 'acheté le ' + new Date(l.purchaseDay + 'T12:00').toLocaleDateString('fr-FR') : ''].filter(Boolean).join(' · '), [
       ['Vente TTC', l.total != null ? euro(l.total) : null],
       ['Marge HT', l.margin != null ? euro(l.margin) : null, l.margin != null ? margin(l.margin) : ''],
     ]);
+  const sum = (lines, k) => (lines.some(l => l[k] != null) ? lines.reduce((n, l) => n + Number(l[k] || 0), 0) : null);
+  function frames(lines, buy) {
+    const groups = new Map();
+    lines.forEach((l, i) => {
+      const k = l.cadre ?? 'ligne' + i;
+      if (!groups.has(k)) groups.set(k, []);
+      groups.get(k).push(l);
+    });
+    return [...groups.values()].map(g => {
+      const total = buy ? sum(g, 'net') : sum(g, 'total');
+      return el(
+        'div',
+        { className: 'ch-obj' },
+        el(
+          'div',
+          { className: 'ch-obj-head' },
+          el('small', { textContent: buy && g[0].at ? time(g[0].at) : '' }),
+          total != null ? el('b', { textContent: (buy ? 'Net payé ' : 'Total TTC ') + euro(total) }) : null
+        ),
+        ...g.map(buy ? buyItem : saleItem)
+      );
+    });
+  }
   const margin = v => 'ch-margin' + (Number(v) < 0 ? ' ch-neg' : '');
 
   function rows(block, group) {
@@ -142,7 +162,8 @@
       // Ventes : aux clients d'abord, puis les envois (GoldTrade, CNDO) sous « Envois ».
       const clients = lines.filter(l => !l.to),
         sent = lines.filter(l => l.to);
-      const list = [...clients.map(card), ...(sent.length ? [el('div', { className: 'ch-sub', textContent: 'Envois' }), ...sent.map(card)] : [])];
+      const buy = card === 'achats';
+      const list = [...frames(clients, buy), ...(sent.length ? [el('div', { className: 'ch-sub', textContent: 'Envois' }), ...frames(sent, buy)] : [])];
       out.push(
         el(
           'details',
@@ -154,14 +175,14 @@
     };
     if (block.achats) {
       const a = block.achats;
-      if (a.count != null) unfold('Achats', a.count + ' achat' + (a.count > 1 ? 's' : '') + (a.weight != null ? ' · ' + grams(a.weight) : ''), a.lines, buyCard);
+      if (a.count != null) unfold('Achats', a.count + ' achat' + (a.count > 1 ? 's' : '') + (a.weight != null ? ' · ' + grams(a.weight) : ''), a.lines, 'achats');
       money(exercice ? 'Achats HT' : 'Achats taxe comprise', a.ht);
       money('Net payé aux clients', a.ttc);
     }
     if (block.marge != null) row('Marge théorique', euro(block.marge), margin(block.marge));
     if (block.ventes) {
       const v = block.ventes;
-      if (v.count != null) unfold('Ventes', v.count + ' vente' + (v.count > 1 ? 's' : ''), v.lines, saleCard);
+      if (v.count != null) unfold('Ventes', v.count + ' vente' + (v.count > 1 ? 's' : ''), v.lines, 'ventes');
       money(exercice ? 'CA HT' : 'Ventes HT', v.ht);
       money('Ventes TTC', v.ttc);
     }
