@@ -1,5 +1,10 @@
 # Historique
 
+## 21/11/2026 — Chiffres : envois séparés dans le détail des ventes
+
+- Détail des ventes : ventes aux clients d'abord, puis « Envois » (GoldTrade, CNDO), pour que les
+  lignes retombent sur le total des ventes (format d'Orbis 3.1.26 : champ `to`).
+
 ## 21/11/2026 — Chiffres : détail objet par objet du jour
 
 - Aujourd'hui et Hier : les lignes « Achats » et « Ventes » se déroulent et montrent chaque objet,

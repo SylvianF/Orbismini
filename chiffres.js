@@ -118,7 +118,12 @@
       ['Marge théo.', l.theory != null ? euro(l.theory) : null, l.theory != null ? margin(l.theory) : ''],
     ]);
   const saleCard = l =>
-    objectCard(l.purchaseDay ? 'acheté le ' + new Date(l.purchaseDay + 'T12:00').toLocaleDateString('fr-FR') : '', l, [
+    objectCard(
+      [l.to ? 'envoi à ' + l.to : '', l.purchaseDay ? 'acheté le ' + new Date(l.purchaseDay + 'T12:00').toLocaleDateString('fr-FR') : '']
+        .filter(Boolean)
+        .join(' · '),
+      l,
+      [
       ['Vente TTC', l.total != null ? euro(l.total) : null],
       ['Marge HT', l.margin != null ? euro(l.margin) : null, l.margin != null ? margin(l.margin) : ''],
     ]);
@@ -134,12 +139,16 @@
     // comme le survol de l'Accueil d'Orbis.
     const unfold = (label, value, lines, card) => {
       if (!Array.isArray(lines) || !lines.length) return row(label, value);
+      // Ventes : aux clients d'abord, puis les envois (GoldTrade, CNDO) sous « Envois ».
+      const clients = lines.filter(l => !l.to),
+        sent = lines.filter(l => l.to);
+      const list = [...clients.map(card), ...(sent.length ? [el('div', { className: 'ch-sub', textContent: 'Envois' }), ...sent.map(card)] : [])];
       out.push(
         el(
           'details',
           { className: 'ch-fold' },
           el('summary', { className: 'ch-row' }, el('span', { textContent: label }), el('b', { textContent: value })),
-          el('div', { className: 'ch-lines' }, ...lines.map(card))
+          el('div', { className: 'ch-lines' }, ...list)
         )
       );
     };

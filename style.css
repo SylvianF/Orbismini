@@ -1425,3 +1425,9 @@ body::before {
 .ch-obj-cells .ch-neg b {
   color: var(--down);
 }
+.ch-sub {
+  margin: 4px 0 -2px;
+  color: var(--gold);
+  font-size: 13px;
+  font-weight: 600;
+}
