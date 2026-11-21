@@ -20,7 +20,7 @@ final class LoginModel: ObservableObject {
     }
 
     /// Même formulaire que la page de connexion du site (POST /login).
-    static func form(_ password: String) -> Data {
+    nonisolated static func form(_ password: String) -> Data {
         let allowed = CharacterSet(charactersIn: "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-._*")
         let encoded = password.addingPercentEncoding(withAllowedCharacters: allowed) ?? ""
         return Data(("username=GoldApp&password=" + encoded).utf8)
