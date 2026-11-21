@@ -50,6 +50,7 @@
       Object.values(links).map(async l => ({ box: hex(await hmac(l.secret, 'chiffres-boite')), key: await hmac(l.secret, 'chiffres-cle') }))
     );
   }
+  const opened = new Set(); // lignes déroulées (Achats, Ventes), gardées d'un affichage à l'autre
   let data = null,
     error = '';
   async function load() {
@@ -77,14 +78,18 @@
           /* paquet illisible (PC remis à zéro…) : ignoré */
         }
       }
-      error = '';
       // Rien reçu (Orbismini redémarré : le prochain envoi d'Orbis arrive dans 5 minutes au plus) :
       // on garde ce qu'on a.
+      const before = [data?.at, error];
       if (best) {
         data = best;
         tab.hidden = false;
         store(SEEN, '1');
       }
+      error = '';
+      // Rien de nouveau (contrôle de chaque minute) : l'écran n'est pas redessiné, rien ne se replie.
+      const old = data && Date.now() - Date.parse(data.at) > 30 * 60000; // l'alerte « plus de 30 minutes » doit paraître
+      if (before[0] === data?.at && !before[1] && !old) return;
     } catch (e) {
       error = e.message || 'Chiffres indisponibles';
     }
@@ -178,7 +183,11 @@
       out.push(
         el(
           'details',
-          { className: 'ch-fold' },
+          {
+            className: 'ch-fold',
+            open: opened.has(label),
+            ontoggle: e => (e.target.open ? opened.add(label) : opened.delete(label)),
+          },
           el(
             'summary',
             { className: 'ch-row' },

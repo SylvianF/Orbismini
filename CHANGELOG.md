@@ -1,5 +1,10 @@
 # Historique
 
+## 21/11/2026 — Chiffres : le détail ouvert ne se referme plus tout seul
+
+- Le contrôle de chaque minute ne redessine l'écran que si de nouveaux chiffres sont arrivés, et
+  « Achats » ou « Ventes » restent déroulés d'un affichage à l'autre (changement de période compris).
+
 ## 21/11/2026 — Chiffres : un cadre par transaction
 
 - Mois préc. et Année : lignes « Charges » et « Résultat » (rouge si négatif), avec le droit
