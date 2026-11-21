@@ -56,6 +56,14 @@ jobs:
             -derivedDataPath build -resultBundlePath build/Tests.xcresult \
             CODE_SIGNING_ALLOWED=NO > build/xcodebuild.log 2>&1 || ok=$?
           grep -E "error:|warning: .*/ios/|Test Case .*(passed|failed)|Executed|[*][*] (BUILD|TEST)" build/xcodebuild.log | tail -400 || true
+          # Erreurs en annotations (lisibles sans connexion par l’API publique de GitHub).
+          if [ "$ok" -ne 0 ]; then
+            grep -E "(error:|: error |failed \()" build/xcodebuild.log | sort -u | head -40 | while IFS= read -r line; do
+              short=$(printf '%s' "$line" | sed -E 's#^.*/ios/##' | cut -c1-900)
+              echo "::error::$short"
+            done
+            [ -n "$(grep -E "(error:|: error |failed \()" build/xcodebuild.log | head -1)" ] || tail -30 build/xcodebuild.log | while IFS= read -r line; do echo "::error::$(printf '%s' "$line" | cut -c1-900)"; done
+          fi
           exit $ok
       - name: Captures d’écran
         run: |
