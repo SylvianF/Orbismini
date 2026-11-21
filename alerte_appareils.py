@@ -149,7 +149,7 @@ class Store:
                 self._save(data, "Téléphone détaché de l’alerte d’Orbis")
 
     # ---------------------------------------------------------------- contrôle
-    def check(self, price_loader, post=None):
+    def check(self, price_loader, post=None, apns_post=None):
         """Contrôle du cours pour tous les téléphones (au plus une fois par minute)."""
         if time.monotonic() - self.checked < 60:
             return []
@@ -176,7 +176,76 @@ class Store:
                 out.append(h["id"])
             except Exception:
                 pass
+            self.push(lambda: self.apns_tokens(did), h, apns_post)
         return out
+
+    # ---------------------------------------------------------------- application iPhone (apns.py)
+    MAX_APNS = 3
+
+    def set_apns(self, did, token, env):
+        """Jeton de notification de l’application iPhone pour ce téléphone (vide : retiré).
+        Un jeton seul ne sert à rien sans la clé d’Apple, rangée dans les réglages de Render."""
+        import apns
+
+        entry = None if not token else dict(zip(("token", "env"), apns.clean_token(token, env)))
+        with self.lock:
+            self._load()
+            data = self._copy()
+            for other in data["devices"].values():
+                if entry and other.get("apns"):
+                    other["apns"] = [t for t in other["apns"] if t["token"] != entry["token"]]
+            d = data["devices"].get(did)
+            if not d:
+                if not entry:
+                    return
+                self._prune(data)
+                if len(data["devices"]) >= MAX_DEVICES:
+                    raise PermissionError("Trop de téléphones avec une alerte")
+                d = data["devices"][did] = dict(state={"hits": []})
+            kept = [t for t in d.get("apns") or [] if not entry or t["token"] != entry["token"]]
+            d["apns"] = ((kept + [entry]) if entry else [])[-self.MAX_APNS:]
+            if not d["apns"]:
+                d.pop("apns")
+            d["seen"] = _today()
+            if data != self.data:
+                self._save(data, "Notifications de l’application iPhone d’un téléphone")
+
+    def apns_tokens(self, did):
+        with self.lock:
+            self._load()
+            d = self.data["devices"].get(did) or {}
+            return [(t["token"], t["env"]) for t in d.get("apns") or []]
+
+    def orbis_apns(self):
+        """Jetons des téléphones reliés à l’alerte commune avec Orbis."""
+        with self.lock:
+            self._load()
+            return [x for did in self.data["orbis"] for x in self.apns_tokens(did)]
+
+    def forget_apns(self, tokens):
+        if not tokens:
+            return
+        with self.lock:
+            self._load()
+            data = self._copy()
+            for d in data["devices"].values():
+                if d.get("apns"):
+                    d["apns"] = [t for t in d["apns"] if t["token"] not in tokens]
+                    if not d["apns"]:
+                        d.pop("apns")
+            if data != self.data:
+                self._save(data, "Notifications de l’application iPhone : jeton périmé retiré")
+
+    def push(self, tokens, h, post=None):
+        """Alerte vers l’application iPhone, seulement si apns.py est allumé ; jamais d’erreur.
+        tokens : fonction qui donne les jetons (lue seulement quand c’est allumé)."""
+        import apns
+
+        try:
+            if apns.enabled():
+                self.forget_apns(apns.send_hit(tokens(), h, post))
+        except Exception:
+            pass
 
 
 STORE = Store()
