@@ -12,6 +12,8 @@ on:
 concurrency:
   group: ios-${{ github.ref }}
   cancel-in-progress: true
+permissions:
+  contents: write   # seulement pour la branche captures-iphone
 jobs:
   build:
     runs-on: macos-15
@@ -56,6 +58,7 @@ jobs:
             -derivedDataPath build -resultBundlePath build/Tests.xcresult \
             CODE_SIGNING_ALLOWED=NO > build/xcodebuild.log 2>&1 || ok=$?
           grep -E "error:|warning: .*/ios/|Test Case .*(passed|failed)|Executed|[*][*] (BUILD|TEST)" build/xcodebuild.log | tail -400 || true
+          grep -E "Executed [0-9]+ tests" build/xcodebuild.log | tail -1 | sed 's/^/::notice::/' || true
           # Erreurs en annotations (lisibles sans connexion par l’API publique de GitHub).
           if [ "$ok" -ne 0 ]; then
             grep -E "(error:|: error |failed \()" build/xcodebuild.log | sort -u | head -40 | while IFS= read -r line; do
@@ -82,6 +85,17 @@ jobs:
             xcrun simctl io "$UDID" screenshot "../captures/$screen.png"
           done
           ls -la ../captures
+      - name: Captures sur la branche captures-iphone (lisibles sans connexion)
+        if: github.event_name != 'pull_request'
+        working-directory: captures
+        run: |
+          git init -q -b captures-iphone
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          printf 'Captures du simulateur (données d’exemple), tâche %s, %s.\n' "${{ github.run_number }}" "${GITHUB_SHA::7}" > LISEZ-MOI.txt
+          git add -A
+          git commit -q -m "Captures de l’application iPhone (${GITHUB_SHA::7})"
+          git push -q -f "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" captures-iphone
       - name: Captures (artefact)
         if: always()
         uses: actions/upload-artifact@v4

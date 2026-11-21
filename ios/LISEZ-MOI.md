@@ -31,15 +31,16 @@ Ne colle jamais une clé dans une conversation : chaque clé va directement à l
 
 ### Compte Apple Developer
 
-Fait (compte individuel, « Abonnement confirmé » reçu). Pour vérifier qu’il est bien actif :
-sur le PC, developer.apple.com → Account (connexion avec ton identifiant Apple) → la page
-affiche « Apple Developer Program » avec une date d’expiration dans un an. Sur l’iPhone, l’app
-Apple Developer → Compte montre la même chose.
+Inscription faite (compte individuel, paiement confirmé). Tant que la page developer.apple.com →
+Account affiche « (En attente) » à côté de ton nom, Apple n’a pas fini : rien à faire, attendre.
+C’est prêt quand Apple envoie l’e-mail de bienvenue dans l’Apple Developer Program et que la
+page Account montre « Adhésion » et « Certificats, identifiants et profils » (en général quelques
+heures à deux jours ; au-delà : developer.apple.com → Support → Nous contacter → Adhésion).
 
-### Maintenant que le compte est actif (sur le PC, dans le navigateur)
+### Dès que le compte est actif (sur le PC, dans le navigateur)
 
 1. **Identifiant d’équipe** (Team ID, 10 caractères, lettres et chiffres) : developer.apple.com →
-   Account → Membership details → « Team ID ».
+   Account → Adhésion (Membership details) → « Team ID ».
 2. **Clé API App Store Connect** (pour que GitHub signe et envoie l’application) :
    appstoreconnect.apple.com → Utilisateurs et accès → Intégrations → Clés de l’API
    App Store Connect → « + ». Nom : GitHub ; accès : **Admin**. Note l’**ID de la clé** et
