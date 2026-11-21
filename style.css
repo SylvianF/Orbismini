@@ -1373,12 +1373,33 @@ body::before {
 .ch-fold > summary::-webkit-details-marker {
   display: none;
 }
-.ch-fold > summary span::after {
-  content: ' ⌄';
-  color: var(--gold);
+.ch-fold > summary {
+  align-items: center;
+  min-height: 44px;
+  color: var(--text);
 }
-.ch-fold[open] > summary span::after {
-  content: ' ⌃';
+.ch-fold > summary b {
+  margin-left: auto;
+}
+.ch-count {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 400;
+}
+.ch-chevron {
+  flex: none;
+  width: 18px;
+  height: 18px;
+  margin-left: 6px;
+  fill: none;
+  stroke: var(--gold);
+  stroke-width: 2.2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  transition: transform 0.2s;
+}
+.ch-fold[open] .ch-chevron {
+  transform: rotate(90deg);
 }
 .ch-lines {
   display: grid;

@@ -147,6 +147,17 @@
       );
     });
   }
+  // Chevron dessiné des lignes déroulables (pivote à l'ouverture).
+  function chevron() {
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    svg.setAttribute('viewBox', '0 0 24 24');
+    svg.setAttribute('aria-hidden', 'true');
+    svg.classList.add('ch-chevron');
+    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    path.setAttribute('d', 'M9 6l6 6-6 6');
+    svg.append(path);
+    return svg;
+  }
   const margin = v => 'ch-margin' + (Number(v) < 0 ? ' ch-neg' : '');
 
   function rows(block, group) {
@@ -168,7 +179,13 @@
         el(
           'details',
           { className: 'ch-fold' },
-          el('summary', { className: 'ch-row' }, el('span', { textContent: label }), el('b', { textContent: value })),
+          el(
+            'summary',
+            { className: 'ch-row' },
+            el('span', {}, label, el('small', { className: 'ch-count', textContent: ' · ' + new Set(lines.map((l, i) => l.cadre ?? 'ligne' + i)).size })),
+            el('b', { textContent: value }),
+            chevron()
+          ),
           el('div', { className: 'ch-lines' }, ...list)
         )
       );
@@ -187,6 +204,11 @@
       money('Ventes TTC', v.ttc);
     }
     if (block.margeReelle != null) row('Marge réelle', euro(block.margeReelle), margin(block.margeReelle));
+    // Charges et résultat (Mois préc., Année ; droit propre dans Orbis).
+    if (block.resultat) {
+      money('Charges', block.resultat.charges);
+      if (block.resultat.resultat != null) row('Résultat', euro(block.resultat.resultat), margin(block.resultat.resultat));
+    }
     return out;
   }
 

@@ -2,6 +2,10 @@
 
 ## 21/11/2026 — Chiffres : un cadre par transaction
 
+- Mois préc. et Année : lignes « Charges » et « Résultat » (rouge si négatif), avec le droit
+  « Charges et résultat » d'Orbis.
+- Lignes déroulables : chevron dessiné qui pivote, toute la ligne à toucher (44 px), nombre de
+  transactions en petit (« Achats · 4 »).
 - Détail du jour : un cadre par transaction (champ `cadre` d'Orbis 3.1.28, jamais affiché), avec
   l'heure et le net payé additionné pour un achat, le total TTC pour une vente ; dedans, chaque
   objet. Les envois restent sous « Envois ».
