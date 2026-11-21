@@ -94,23 +94,65 @@
   // Lignes d'un bloc de chiffres ; group : un seul groupe (achats, marge, ventes, margeReelle).
   // source « exercice » (Mois, Mois préc., Année) : chiffres du tableau « Exercice comptable »
   // d'Orbis : achats HT, CA HT (envois compris), marge HT ; pas de TTC.
+  // Un objet acheté ou vendu (mêmes colonnes que le survol de l'Accueil d'Orbis).
+  const time = iso => new Date(iso).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+  const fine = t => Number(t).toLocaleString('fr-FR', { maximumFractionDigits: 2 }) + ' ‰';
+  const pct = v => Number(v).toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' %';
+  function objectCard(when, l, cells) {
+    const name = (l.count > 1 ? l.count + ' × ' : '') + (l.article || l.description || 'Objet');
+    const facts = [l.titre ? fine(l.titre) : null, l.weight != null ? grams(l.weight) : null].filter(Boolean).join(' · ');
+    return el(
+      'div',
+      { className: 'ch-obj' },
+      el('div', { className: 'ch-obj-head' }, el('b', { textContent: name }), when ? el('small', { textContent: when }) : null),
+      l.description && l.description !== l.article ? el('small', { className: 'ch-obj-desc', textContent: l.description }) : null,
+      facts ? el('small', { className: 'ch-obj-desc', textContent: facts }) : null,
+      el('div', { className: 'ch-obj-cells' }, ...cells.filter(c => c && c[1] != null).map(([k, v, cls]) => el('span', { className: cls || '' }, el('small', { textContent: k }), el('b', { textContent: v }))))
+    );
+  }
+  const buyCard = l =>
+    objectCard(l.at ? time(l.at) : '', l, [
+      ['Taxe comprise', l.gross != null ? euro(l.gross) : null],
+      ['Net payé', l.net != null ? euro(l.net) : null],
+      ['GtaX', l.gtax != null ? pct(l.gtax) : null],
+      ['Marge théo.', l.theory != null ? euro(l.theory) : null, l.theory != null ? margin(l.theory) : ''],
+    ]);
+  const saleCard = l =>
+    objectCard(l.purchaseDay ? 'acheté le ' + new Date(l.purchaseDay + 'T12:00').toLocaleDateString('fr-FR') : '', l, [
+      ['Vente TTC', l.total != null ? euro(l.total) : null],
+      ['Marge HT', l.margin != null ? euro(l.margin) : null, l.margin != null ? margin(l.margin) : ''],
+    ]);
+  const margin = v => 'ch-margin' + (Number(v) < 0 ? ' ch-neg' : '');
+
   function rows(block, group) {
     const out = [];
     const exercice = block.source === 'exercice';
     if (group) block = { [group]: block[group] };
     const row = (label, value, cls = '') => out.push(el('div', { className: 'ch-row ' + cls }, el('span', { textContent: label }), el('b', { textContent: value })));
     const money = (label, v, cls) => v != null && row(label, euro(v), cls);
-    const margin = v => 'ch-margin' + (Number(v) < 0 ? ' ch-neg' : '');
+    // Ligne « Achats » ou « Ventes » déroulable : détail objet par objet (Aujourd'hui, Hier),
+    // comme le survol de l'Accueil d'Orbis.
+    const unfold = (label, value, lines, card) => {
+      if (!Array.isArray(lines) || !lines.length) return row(label, value);
+      out.push(
+        el(
+          'details',
+          { className: 'ch-fold' },
+          el('summary', { className: 'ch-row' }, el('span', { textContent: label }), el('b', { textContent: value })),
+          el('div', { className: 'ch-lines' }, ...lines.map(card))
+        )
+      );
+    };
     if (block.achats) {
       const a = block.achats;
-      if (a.count != null) row('Achats', a.count + ' achat' + (a.count > 1 ? 's' : '') + (a.weight != null ? ' · ' + grams(a.weight) : ''));
+      if (a.count != null) unfold('Achats', a.count + ' achat' + (a.count > 1 ? 's' : '') + (a.weight != null ? ' · ' + grams(a.weight) : ''), a.lines, buyCard);
       money(exercice ? 'Achats HT' : 'Achats taxe comprise', a.ht);
       money('Net payé aux clients', a.ttc);
     }
     if (block.marge != null) row('Marge théorique', euro(block.marge), margin(block.marge));
     if (block.ventes) {
       const v = block.ventes;
-      if (v.count != null) row('Ventes', v.count + ' vente' + (v.count > 1 ? 's' : ''));
+      if (v.count != null) unfold('Ventes', v.count + ' vente' + (v.count > 1 ? 's' : ''), v.lines, saleCard);
       money(exercice ? 'CA HT' : 'Ventes HT', v.ht);
       money('Ventes TTC', v.ttc);
     }
