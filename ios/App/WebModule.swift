@@ -100,7 +100,9 @@ private struct WebPage: UIViewRepresentable {
         web.isOpaque = false
         web.backgroundColor = UIColor(Theme.bg2)
         web.scrollView.backgroundColor = UIColor(Theme.bg2)
-        web.allowsBackForwardNavigationGestures = false
+        // Glisser du bord gauche : retour à l’écran précédent du site (pièce ouverte → liste des cours,
+        // pièce inconnue → Scan…), comme le bouton retour de Safari.
+        web.allowsBackForwardNavigationGestures = true
         web.navigationDelegate = context.coordinator
         web.uiDelegate = context.coordinator
         #if DEBUG

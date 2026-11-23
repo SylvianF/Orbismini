@@ -106,22 +106,28 @@ final class CoinCameraController: UIViewController, AVCapturePhotoCaptureDelegat
     private let cancel = UIButton(type: .system)
     private var circle = CGRect.zero
     private var busy = false
+    private var device: AVCaptureDevice?
+    private var aimed = false
+    private var areaChanged: NSObjectProtocol?
 
     override var prefersStatusBarHidden: Bool { true }
 
     override func viewDidLoad() {
         super.viewDidLoad()
         view.backgroundColor = .black
-        if let camera = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: .back),
+        if let camera = Self.camera(),
            let input = try? AVCaptureDeviceInput(device: camera),
            session.canAddInput(input), session.canAddOutput(output) {
             session.sessionPreset = .photo
             session.addInput(input)
             session.addOutput(output)
+            output.maxPhotoQualityPrioritization = .quality
             let layer = AVCaptureVideoPreviewLayer(session: session)
             layer.videoGravity = .resizeAspectFill
             view.layer.addSublayer(layer)
             preview = layer
+            device = camera
+            prepare(camera)
         }
         shade.fillRule = .evenOdd
         shade.fillColor = UIColor.black.withAlphaComponent(0.55).cgColor
@@ -131,7 +137,10 @@ final class CoinCameraController: UIViewController, AVCapturePhotoCaptureDelegat
         ring.lineWidth = 3
         view.layer.addSublayer(ring)
 
-        hint.text = "Place la pièce dans le cercle, bien à plat"
+        hint.text = "Place la pièce dans le cercle, bien à plat.
+Touche l’écran pour refaire la mise au point."
+        hint.adjustsFontSizeToFitWidth = true
+        view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(tapped(_:))))
         hint.textColor = .white
         hint.font = .preferredFont(forTextStyle: .headline)
         hint.textAlignment = .center
@@ -169,15 +178,89 @@ final class CoinCameraController: UIViewController, AVCapturePhotoCaptureDelegat
         ring.path = UIBezierPath(ovalIn: circle).cgPath
         ring.frame = b
         let safe = view.safeAreaInsets
-        hint.frame = CGRect(x: 20, y: max(safe.top, 20) + 10, width: b.width - 40, height: 50)
+        hint.frame = CGRect(x: 20, y: max(safe.top, 20) + 10, width: b.width - 40, height: 56)
         shutter.frame = CGRect(x: b.midX - 36, y: b.height - safe.bottom - 110, width: 72, height: 72)
         cancel.frame = CGRect(x: 16, y: shutter.frame.midY - 22, width: 100, height: 44)
+        if !aimed, preview != nil, !circle.isEmpty {
+            aimed = true
+            focus(at: CGPoint(x: circle.midX, y: circle.midY))
+        }
+    }
+
+    // MARK: - Mise au point
+
+    /// Appareil « virtuel » (plusieurs objectifs) quand l’iPhone en a un : il passe tout seul sur
+    /// l’objectif macro quand la pièce est proche, comme l’app Appareil photo. Sinon l’objectif principal.
+    private static func camera() -> AVCaptureDevice? {
+        for type in [AVCaptureDevice.DeviceType.builtInTripleCamera, .builtInDualWideCamera, .builtInWideAngleCamera] {
+            if let d = AVCaptureDevice.default(type, for: .video, position: .back) { return d }
+        }
+        return nil
+    }
+
+    private func prepare(_ d: AVCaptureDevice) {
+        guard (try? d.lockForConfiguration()) != nil else { return }
+        // Même cadrage que l’objectif principal (« 1× ») ; l’objectif macro prend le relais de près.
+        if let wide = d.virtualDeviceSwitchOverVideoZoomFactors.first?.doubleValue {
+            d.videoZoomFactor = min(max(CGFloat(wide), d.minAvailableVideoZoomFactor), d.maxAvailableVideoZoomFactor)
+        }
+        if d.isAutoFocusRangeRestrictionSupported { d.autoFocusRangeRestriction = .near }
+        if d.isSmoothAutoFocusSupported { d.isSmoothAutoFocusEnabled = false }
+        if d.isFocusModeSupported(.continuousAutoFocus) { d.focusMode = .continuousAutoFocus }
+        if d.isExposureModeSupported(.continuousAutoExposure) { d.exposureMode = .continuousAutoExposure }
+        d.isSubjectAreaChangeMonitoringEnabled = true
+        d.unlockForConfiguration()
+        // La pièce a bougé : nouvelle mise au point sur le cercle.
+        areaChanged = NotificationCenter.default.addObserver(forName: AVCaptureDevice.subjectAreaDidChangeNotification,
+                                                             object: d, queue: .main) { [weak self] _ in
+            guard let self else { return }
+            self.focus(at: CGPoint(x: self.circle.midX, y: self.circle.midY))
+        }
+    }
+
+    @objc private func tapped(_ g: UITapGestureRecognizer) {
+        let p = g.location(in: view)
+        guard !shutter.frame.contains(p), !cancel.frame.contains(p) else { return }
+        focus(at: p)
+        let mark = CAShapeLayer()
+        mark.path = UIBezierPath(ovalIn: CGRect(x: p.x - 30, y: p.y - 30, width: 60, height: 60)).cgPath
+        mark.fillColor = UIColor.clear.cgColor
+        mark.strokeColor = UIColor.white.cgColor
+        mark.lineWidth = 2
+        view.layer.addSublayer(mark)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.7) { mark.removeFromSuperlayer() }
+    }
+
+    private func focus(at layerPoint: CGPoint) {
+        guard let d = device, let preview, (try? d.lockForConfiguration()) != nil else { return }
+        let point = preview.captureDevicePointConverted(fromLayerPoint: layerPoint)
+        if d.isFocusPointOfInterestSupported { d.focusPointOfInterest = point }
+        if d.isFocusModeSupported(.continuousAutoFocus) { d.focusMode = .continuousAutoFocus }
+        if d.isExposurePointOfInterestSupported { d.exposurePointOfInterest = point }
+        if d.isExposureModeSupported(.continuousAutoExposure) { d.exposureMode = .continuousAutoExposure }
+        d.unlockForConfiguration()
+    }
+
+    deinit {
+        if let areaChanged { NotificationCenter.default.removeObserver(areaChanged) }
     }
 
     @objc private func takePhoto() {
         guard !busy, preview != nil else { return }
         busy = true
-        output.capturePhoto(with: AVCapturePhotoSettings(), delegate: self)
+        shutter.alpha = 0.5
+        capture(waited: 0)
+    }
+
+    /// Attend la fin de la mise au point (1,5 s au plus) avant de prendre la photo.
+    private func capture(waited: Double) {
+        if let d = device, d.isAdjustingFocus, waited < 1.5 {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) { self.capture(waited: waited + 0.05) }
+            return
+        }
+        let settings = AVCapturePhotoSettings()
+        settings.photoQualityPrioritization = output.maxPhotoQualityPrioritization == .quality ? .quality : .balanced
+        output.capturePhoto(with: settings, delegate: self)
     }
 
     @objc private func close() {
@@ -194,6 +277,7 @@ final class CoinCameraController: UIViewController, AVCapturePhotoCaptureDelegat
         let data = photo.fileDataRepresentation()
         DispatchQueue.main.async {
             self.busy = false
+            self.shutter.alpha = 1
             guard let data, let image = UIImage(data: data) else { return }
             self.stop()
             self.onDone?(self.crop(image))
