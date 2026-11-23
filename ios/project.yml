@@ -41,7 +41,6 @@ targets:
         UISupportedInterfaceOrientations:
           - UIInterfaceOrientationPortrait
         UIRequiresFullScreen: true
-        UIUserInterfaceStyle: Dark
         CFBundleURLTypes:
           - CFBundleURLName: fr.cndo.orbismini
             CFBundleURLSchemes:

@@ -2,9 +2,13 @@ import SwiftUI
 
 struct RootView: View {
     @EnvironmentObject private var model: AppModel
+    @AppStorage(ThemeChoice.key, store: SharedStore.defaults) private var themeRaw = ThemeChoice.saphir.rawValue
+
+    private var theme: ThemeChoice { ThemeChoice(rawValue: themeRaw) ?? .saphir }
 
     var body: some View {
-        Group {
+        let _ = styleBars(theme)
+        return Group {
             if model.loggedIn {
                 TabView(selection: $model.tab) {
                     CoursView()
@@ -13,7 +17,7 @@ struct RootView: View {
                     MeteoView()
                         .tabItem { Label("Météo", systemImage: "cloud.sun") }
                         .tag(AppModel.Tab.meteo)
-                    WebModuleView(view: "scans", title: "Scan")
+                    ScanView()
                         .tabItem { Label("Scan", systemImage: "viewfinder") }
                         .tag(AppModel.Tab.scan)
                     WebModuleView(view: "rachat", title: "Rachat")
@@ -31,10 +35,13 @@ struct RootView: View {
             }
         }
         .background(Theme.bg2.ignoresSafeArea())
-        .onAppear(perform: styleBars)
+        .preferredColorScheme(theme.colorScheme)
+        .tint(Theme.gold)
+        // Thème changé : tout est redessiné, pages web comprises (elles relisent le thème).
+        .id(themeRaw)
     }
 
-    private func styleBars() {
+    private func styleBars(_ theme: ThemeChoice) {
         let tab = UITabBarAppearance()
         tab.configureWithOpaqueBackground()
         tab.backgroundColor = UIColor(Theme.bg2)

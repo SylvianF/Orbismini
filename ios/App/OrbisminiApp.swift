@@ -12,8 +12,6 @@ struct OrbisminiApp: App {
             RootView()
                 .environmentObject(model)
                 .environment(\.locale, Fmt.fr)
-                .preferredColorScheme(.dark)
-                .tint(Theme.gold)
                 .onOpenURL { model.open($0) }
         }
     }
@@ -33,6 +31,13 @@ final class AppModel: ObservableObject {
     @Published var showWidgetPreview = false
 
     private init() {
+        // Captures d’écran : « -theme light » (Perle), « -theme graphite » (Onyx).
+        let args = ProcessInfo.processInfo.arguments
+        if let i = args.firstIndex(of: "-theme"), i + 1 < args.count, ThemeChoice(rawValue: args[i + 1]) != nil {
+            SharedStore.defaults.set(args[i + 1], forKey: ThemeChoice.key)
+        } else if Config.isDemo {
+            SharedStore.defaults.set(ThemeChoice.saphir.rawValue, forKey: ThemeChoice.key)
+        }
         loggedIn = Config.isDemo || Session.isOpen
         switch Config.startScreen {
         case "connexion": loggedIn = false

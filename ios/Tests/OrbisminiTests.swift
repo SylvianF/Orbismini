@@ -220,6 +220,27 @@ final class RetryTests: XCTestCase {
     }
 }
 
+final class BollingerTests: XCTestCase {
+    func testLikeTheSite() {
+        let base = Date(timeIntervalSince1970: 1_800_000_000)
+        let pts = (0..<25).map { PricePoint(date: base.addingTimeInterval(Double($0) * 600), price: Double(100 + $0 % 2)) }
+        let b = Bollinger.bands(pts)
+        XCTAssertEqual(b.count, 6)                       // à partir du 20e point
+        XCTAssertEqual(b[0].mid, 100.5, accuracy: 1e-9)  // moyenne de 20 points
+        XCTAssertEqual(b[0].up, 101.5, accuracy: 1e-9)   // + 2 écarts-types (0,5)
+        XCTAssertEqual(b[0].low, 99.5, accuracy: 1e-9)
+        XCTAssertTrue(Bollinger.bands(Array(pts.prefix(10))).isEmpty)
+    }
+
+    func testPeriodWindow() {
+        let now = Date(timeIntervalSince1970: 1_800_000_000)
+        let pts = (0..<10).map { PricePoint(date: now.addingTimeInterval(-Double($0) * 43_200), price: 1) }.reversed()
+        let s = MetalSeries(price: 1, points: Array(pts))
+        XCTAssertEqual(s.within(.day, now: now).points.count, 3)   // 0 h, 12 h, 24 h
+        XCTAssertEqual(s.within(.year, now: now).points.count, 10)
+    }
+}
+
 final class DemoTests: XCTestCase {
     func testDemoLooksLikeRealData() {
         for p in Period.allCases {

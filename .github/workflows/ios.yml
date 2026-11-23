@@ -77,12 +77,14 @@ jobs:
           xcrun simctl bootstatus "$UDID" -b
           xcrun simctl status_bar "$UDID" override --time 9:41 --batteryState charged --batteryLevel 100 --cellularBars 4 --wifiBars 3 || true
           xcrun simctl install "$UDID" "$APP"
-          for screen in cours meteo alerte widget reglages connexion rachat; do
+          for shot in cours meteo alerte widget reglages connexion scan rachat cours:light cours:graphite; do
+            screen=${shot%%:*}; theme=dark; [ "$shot" != "$screen" ] && theme=${shot#*:}
+            name=$screen; [ "$theme" != dark ] && name=$screen-$theme
             xcrun simctl terminate "$UDID" fr.cndo.orbismini 2>/dev/null || true
-            xcrun simctl launch "$UDID" fr.cndo.orbismini -demo -ecran "$screen"
+            xcrun simctl launch "$UDID" fr.cndo.orbismini -demo -ecran "$screen" -theme "$theme"
             # Pages web (Rachat) : le serveur Render peut mettre une minute à se réveiller.
             if [ "$screen" = rachat ]; then sleep 45; else sleep 6; fi
-            xcrun simctl io "$UDID" screenshot "../captures/$screen.png"
+            xcrun simctl io "$UDID" screenshot "../captures/$name.png"
           done
           ls -la ../captures
       - name: Captures sur la branche captures-iphone (lisibles sans connexion)

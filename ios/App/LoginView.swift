@@ -75,7 +75,7 @@ struct LoginView: View {
                 header
                 passwordField
                 if let error = model.error {
-                    Text(error).font(.subheadline).foregroundStyle(Color(hex: 0xFFB3AD))
+                    Text(error).font(.subheadline).foregroundStyle(Theme.down)
                 }
                 openButton
                 if model.status == .waking { StatusLine(status: .waking) }
@@ -109,7 +109,7 @@ struct LoginView: View {
             .textContentType(.password)
             .multilineTextAlignment(.center)
             .padding(14)
-            .background(Color(hex: 0x101C24), in: RoundedRectangle(cornerRadius: 12))
+            .background(Theme.bg2, in: RoundedRectangle(cornerRadius: 12))
             .overlay(RoundedRectangle(cornerRadius: 12).stroke(focused ? Theme.gold : Theme.line, lineWidth: focused ? 2 : 1))
             .focused($focused)
             .submitLabel(.go)
@@ -119,13 +119,13 @@ struct LoginView: View {
     private var openButton: some View {
         Button(action: go) {
             HStack {
-                if busy { ProgressView().tint(Theme.bg2) }
+                if busy { ProgressView().tint(Theme.onGold) }
                 Text("Ouvrir").bold()
             }
             .frame(maxWidth: .infinity, minHeight: 50)
         }
         .background(Theme.gold, in: RoundedRectangle(cornerRadius: 12))
-        .foregroundStyle(Color(hex: 0x18242B))
+        .foregroundStyle(Theme.onGold)
         .disabled(model.password.isEmpty || busy)
     }
 

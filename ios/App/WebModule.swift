@@ -46,14 +46,16 @@ final class WebSession: NSObject, WKHTTPCookieStoreObserver {
     }
 }
 
-/// Module du site d’Orbismini (Scan, Rachat, Chiffres, liste des cours) dans l’application.
-/// La barre d’onglets du site est cachée : l’application a la sienne. Rien ne change pour le site.
+/// Module du site d’Orbismini (Pièce inconnue, Ticket, Rachat, Chiffres, liste des cours, Orbiscan)
+/// dans l’application. L’en-tête et la barre d’onglets du site sont cachés : l’application a les
+/// siens. Rien ne change pour le site lui-même.
 struct WebModuleView: View {
-    let view: String
+    var view: String? = nil
+    var path = "/"
     let title: String
 
     var body: some View {
-        WebPage(view: view)
+        WebPage(view: view, path: path)
             .ignoresSafeArea(edges: .bottom)
             .background(Theme.bg2.ignoresSafeArea())
             .navigationTitle(title)
@@ -62,9 +64,10 @@ struct WebModuleView: View {
 }
 
 private struct WebPage: UIViewRepresentable {
-    let view: String
+    let view: String?
+    let path: String
 
-    func makeCoordinator() -> Coordinator { Coordinator(view: view) }
+    func makeCoordinator() -> Coordinator { Coordinator(view: view, path: path) }
 
     func makeUIView(context: Context) -> WKWebView {
         let config = WKWebViewConfiguration()
@@ -73,24 +76,31 @@ private struct WebPage: UIViewRepresentable {
         config.mediaTypesRequiringUserActionForPlayback = []
         let scripts = config.userContentController
         // Même identifiant de téléphone que l’application : l’alerte du site et celle de l’application ne font qu’une.
+        // Même thème que l’application (theme.js du site lit cette clé à l’ouverture).
         scripts.addUserScript(WKUserScript(
-            source: "try{localStorage.setItem('orbismini-appareil','\(Secrets.deviceID)')}catch(e){}",
-            injectionTime: .atDocumentStart, forMainFrameOnly: true))
+            source: "try{localStorage.setItem('orbismini-appareil','\(Secrets.deviceID)');"
+                + "localStorage.setItem('orbismini-theme','\(ThemeChoice.current.rawValue)')}catch(e){}",
+            injectionTime: .atDocumentStart, forMainFrameOnly: false))
         // Onglets du site cachés (l’application a les siens) ; impression confiée à l’iPhone.
         scripts.addUserScript(WKUserScript(
             source: """
-            (function(){var s=document.createElement('style');s.textContent='.views{display:none!important}';
+            (function(){var s=document.createElement('style');
+            s.textContent='.views,header.top,#splash{display:none!important}';
             (document.head||document.documentElement).appendChild(s);
             window.print=function(){window.webkit.messageHandlers.imprimer.postMessage(1)};})();
             """,
             injectionTime: .atDocumentEnd, forMainFrameOnly: true))
         scripts.add(WeakHandler(context.coordinator), name: "imprimer")
+        // Boutons « Photographier… » : appareil photo de l’application (cercle pour les pièces,
+        // scanner de documents pour pièce d’identité, RIB et facture), dans la page et dans Orbiscan.
+        scripts.addUserScript(WKUserScript(source: Self.photoBridge, injectionTime: .atDocumentEnd, forMainFrameOnly: false))
+        scripts.addScriptMessageHandler(WeakReplyHandler(context.coordinator), contentWorld: .page, name: "photo")
 
         let web = WKWebView(frame: .zero, configuration: config)
         web.isOpaque = false
         web.backgroundColor = UIColor(Theme.bg2)
         web.scrollView.backgroundColor = UIColor(Theme.bg2)
-        web.allowsBackForwardNavigationGestures = true
+        web.allowsBackForwardNavigationGestures = false
         web.navigationDelegate = context.coordinator
         web.uiDelegate = context.coordinator
         #if DEBUG
@@ -104,23 +114,83 @@ private struct WebPage: UIViewRepresentable {
 
     func updateUIView(_ web: WKWebView, context: Context) {}
 
-    final class Coordinator: NSObject, WKNavigationDelegate, WKUIDelegate, WKScriptMessageHandler {
-        let view: String
+    /// Remplace le sélecteur de photo du site par la prise de vue de l’application, puis remet la
+    /// photo dans le champ, comme si elle venait du sélecteur : la page continue comme avant.
+    static let photoBridge = """
+    (function(){
+      if (window.__orbisminiPhoto) return; window.__orbisminiPhoto = 1;
+      var h = window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.photo;
+      if (!h) return;
+      function kind(i) {
+        if (i.closest('#piece-sides, .cs-shot')) return 'piece';
+        if (i.closest('#id-sides')) return 'identite';
+        if (i.closest('#rib-side')) return 'rib';
+        if (i.closest('#facture-side')) return 'facture';
+        return null;
+      }
+      document.addEventListener('click', function (e) {
+        var i = e.target;
+        if (!(i instanceof HTMLInputElement) || i.type !== 'file') return;
+        var k = kind(i);
+        if (!k) return;
+        e.preventDefault(); e.stopPropagation();
+        h.postMessage({ kind: k }).then(function (b64) {
+          if (!b64) return;
+          var bin = atob(b64), bytes = new Uint8Array(bin.length);
+          for (var n = 0; n < bin.length; n++) bytes[n] = bin.charCodeAt(n);
+          var dt = new DataTransfer();
+          dt.items.add(new File([bytes], 'photo.jpg', { type: 'image/jpeg', lastModified: Date.now() }));
+          i.files = dt.files;
+          i.dispatchEvent(new Event('change', { bubbles: true }));
+        }).catch(function () {});
+      }, true);
+    })();
+    """
+
+    final class Coordinator: NSObject, WKNavigationDelegate, WKUIDelegate, WKScriptMessageHandler,
+        WKScriptMessageHandlerWithReply {
+        let view: String?
+        let path: String
         weak var web: WKWebView?
 
-        init(view: String) { self.view = view }
+        init(view: String?, path: String) {
+            self.view = view
+            self.path = path
+        }
 
         func loadHome() {
-            var r = URLRequest(url: Config.baseURL)
+            var r = URLRequest(url: URL(string: path, relativeTo: Config.baseURL)?.absoluteURL ?? Config.baseURL)
             r.timeoutInterval = 70   // Render endormi : jusqu’à une minute pour se réveiller
             web?.load(r)
         }
 
-        /// Ouvre la vue du site voulue (mobile.js : boutons data-view).
+        /// Ouvre la vue du site voulue (mobile.js : onglets data-view, cartes data-open de l’écran Scan).
         private func showView(_ web: WKWebView) {
-            guard web.url?.host == Config.host, web.url?.path == "/" || web.url?.path == "" else { return }
-            let js = "(function(){var b=document.querySelector('.views button[data-view=\"\(view)\"]');if(b&&document.body.dataset.view!=='\(view)')b.click();})()"
+            guard let view, web.url?.host == Config.host, web.url?.path == "/" || web.url?.path == "" else { return }
+            let js = "(function(){var v='\(view)';if(document.body.dataset.view===v)return;"
+                + "var b=document.querySelector('.views button[data-view=\"'+v+'\"]')||document.querySelector('[data-open=\"'+v+'\"]');"
+                + "if(b)b.click();})()"
             web.evaluateJavaScript(js)
+        }
+
+        // Prise de vue demandée par la page (photoBridge) : la photo en base64, ou rien si annulée.
+        func userContentController(_ controller: WKUserContentController, didReceive message: WKScriptMessage,
+                                   replyHandler: @escaping (Any?, String?) -> Void) {
+            let raw = (message.body as? [String: Any])?["kind"] as? String ?? ""
+            guard let kind = PhotoKind(rawValue: raw), let web, let host = Self.top(of: web) else {
+                return replyHandler(nil, nil)
+            }
+            Task { @MainActor in
+                PhotoCapture.shared.take(kind, from: host) { data in
+                    replyHandler(data?.base64EncodedString(), nil)
+                }
+            }
+        }
+
+        static func top(of web: WKWebView) -> UIViewController? {
+            guard var top = web.window?.rootViewController else { return nil }
+            while let next = top.presentedViewController { top = next }
+            return top
         }
 
         func webView(_ web: WKWebView, didFinish navigation: WKNavigation!) { showView(web) }
@@ -215,6 +285,17 @@ private struct WebPage: UIViewRepresentable {
             <a href="orbismini://recharger">Réessayer</a></div></body></html>
             """
         }
+    }
+}
+
+/// Même chose pour les messages qui attendent une réponse (photo).
+private final class WeakReplyHandler: NSObject, WKScriptMessageHandlerWithReply {
+    weak var target: WKScriptMessageHandlerWithReply?
+    init(_ target: WKScriptMessageHandlerWithReply) { self.target = target }
+    func userContentController(_ c: WKUserContentController, didReceive message: WKScriptMessage,
+                               replyHandler: @escaping (Any?, String?) -> Void) {
+        guard let target else { return replyHandler(nil, nil) }
+        target.userContentController(c, didReceive: message, replyHandler: replyHandler)
     }
 }
 

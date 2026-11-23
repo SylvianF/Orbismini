@@ -5,10 +5,22 @@ struct SettingsView: View {
     @EnvironmentObject private var app: AppModel
     @Environment(\.dismiss) private var dismiss
     @State private var widgetKey = Secrets.get(.widgetKey) ?? ""
+    @AppStorage(ThemeChoice.key, store: SharedStore.defaults) private var themeRaw = ThemeChoice.saphir.rawValue
     @State private var saved = false
 
     var body: some View {
         Form {
+            Section {
+                Picker("Thème", selection: $themeRaw) {
+                    ForEach(ThemeChoice.allCases) { Text($0.label).tag($0.rawValue) }
+                }
+                .pickerStyle(.segmented)
+                .onChange(of: themeRaw) { _, _ in WidgetCenter.shared.reloadAllTimelines() }
+            } header: {
+                Text("Thème")
+            } footer: {
+                Text("Les mêmes que le site et Orbis : Saphir, Onyx (noir) et Perle (clair). Le widget suit aussi.")
+            }
             Section("Connexion") {
                 LabeledContent("Serveur", value: Config.host)
                 Button("Verrouiller l’application", role: .destructive) {

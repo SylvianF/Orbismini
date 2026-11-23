@@ -11,13 +11,7 @@ enum DemoData {
 
     static func series(_ metal: Metal, _ period: Period) -> MetalSeries {
         let count = 120
-        let days: Double
-        switch period {
-        case .day: days = 1
-        case .week: days = 7
-        case .month: days = 30
-        case .year: days = 365
-        }
+        let days = Double(period.days)
         let span = days * 86_400
         let base = metal == .gold ? 118_400.0 : 1_452.0
         let swing = metal == .gold ? 1_350.0 : 31.0
