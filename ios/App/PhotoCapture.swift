@@ -217,7 +217,10 @@ final class FramedCameraController: UIViewController, AVCapturePhotoCaptureDeleg
             session.sessionPreset = .photo
             session.addInput(input)
             session.addOutput(output)
-            output.maxPhotoQualityPrioritization = .quality
+            // Photo prise à l’instant du toucher quand l’iPhone le permet (pas de délai de déclenchement).
+            output.maxPhotoQualityPrioritization = .balanced
+            if output.isZeroShutterLagSupported { output.isZeroShutterLagEnabled = true }
+            if output.isResponsiveCaptureSupported { output.isResponsiveCaptureEnabled = true }
             let layer = AVCaptureVideoPreviewLayer(session: session)
             layer.videoGravity = .resizeAspectFill
             view.layer.addSublayer(layer)
@@ -393,14 +396,14 @@ final class FramedCameraController: UIViewController, AVCapturePhotoCaptureDeleg
         capture(waited: 0)
     }
 
-    /// Attend la fin de la mise au point (1,5 s au plus) avant de prendre la photo.
+    /// Attend la fin de la mise au point si elle est en cours (0,5 s au plus), puis prend la photo.
     private func capture(waited: Double) {
-        if let d = device, d.isAdjustingFocus, waited < 1.5 {
+        if let d = device, d.isAdjustingFocus, waited < 0.5 {
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) { self.capture(waited: waited + 0.05) }
             return
         }
         let settings = AVCapturePhotoSettings()
-        settings.photoQualityPrioritization = .quality
+        settings.photoQualityPrioritization = .balanced
         output.capturePhoto(with: settings, delegate: self)
     }
 
@@ -417,6 +420,18 @@ final class FramedCameraController: UIViewController, AVCapturePhotoCaptureDeleg
     private func stop() {
         let session = self.session
         DispatchQueue.global(qos: .userInitiated).async { session.stopRunning() }
+    }
+
+    /// Éclair blanc à l’instant exact de la prise : on sait quand on peut bouger.
+    func photoOutput(_ output: AVCapturePhotoOutput, willCapturePhotoFor resolvedSettings: AVCaptureResolvedPhotoSettings) {
+        DispatchQueue.main.async {
+            let flash = UIView(frame: self.view.bounds)
+            flash.backgroundColor = .white
+            flash.alpha = 0.7
+            flash.isUserInteractionEnabled = false
+            self.view.addSubview(flash)
+            UIView.animate(withDuration: 0.25, animations: { flash.alpha = 0 }, completion: { _ in flash.removeFromSuperview() })
+        }
     }
 
     func photoOutput(_ output: AVCapturePhotoOutput, didFinishProcessingPhoto photo: AVCapturePhoto, error: Error?) {
