@@ -1,5 +1,15 @@
 {
  "devices": {
+  "3369de528712d30fd041874cd365a9a47486470587f7b319c15c59bf8469f34c": {
+   "seen": "2026-11-23",
+   "state": {
+    "above": 108500.0,
+    "below": 108000.0,
+    "hits": [],
+    "move": 2.0,
+    "updated": "2026-11-23T15:42:14.419Z"
+   }
+  },
   "af360cbee349ccd9469bdac1990232642fad530fcc62d9071fa1cccdcca9c62b": {
    "seen": "2026-11-20",
    "state": {
