@@ -40,6 +40,7 @@ targets:
           UIColorName: LaunchBackground
         UISupportedInterfaceOrientations:
           - UIInterfaceOrientationPortrait
+        UIRequiresFullScreen: true
         UIUserInterfaceStyle: Dark
         CFBundleURLTypes:
           - CFBundleURLName: fr.cndo.orbismini
@@ -58,6 +59,9 @@ targets:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: fr.cndo.orbismini
         PRODUCT_NAME: Orbismini
+        TARGETED_DEVICE_FAMILY: "1"
+        SUPPORTS_MACCATALYST: NO
+        SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD: NO
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
     dependencies:
@@ -85,6 +89,7 @@ targets:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: fr.cndo.orbismini.widget
         PRODUCT_NAME: OrbisminiWidget
+        TARGETED_DEVICE_FAMILY: "1"
         SKIP_INSTALL: YES
   OrbisminiTests:
     type: bundle.unit-test
