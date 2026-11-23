@@ -3,40 +3,17 @@ import Foundation
 // MARK: - Cours et courbes
 
 enum Period: String, Codable, CaseIterable, Identifiable {
-    case day = "1", week = "7", month = "30", year = "365", fiveYears = "1825", tenYears = "3650"
+    case day = "1", week = "7", month = "30", year = "365"
 
     var id: String { rawValue }
     var days: Int { Int(rawValue) ?? 1 }
-    /// Comme le site : « 1 jour », « 7 jours », « 1 mois », « 1 an », « 5 ans », « 10 ans ».
+    /// Comme le site : « 1 jour », « 7 jours », « 1 mois », « 1 an ».
     var label: String {
         switch self {
         case .day: return "1 jour"
         case .week: return "7 jours"
         case .month: return "1 mois"
         case .year: return "1 an"
-        case .fiveYears: return "5 ans"
-        case .tenYears: return "10 ans"
-        }
-    }
-    var short: String {
-        switch self {
-        case .day: return "1 j"
-        case .week: return "7 j"
-        case .month: return "1 m"
-        case .year: return "1 an"
-        case .fiveYears: return "5 ans"
-        case .tenYears: return "10 ans"
-        }
-    }
-    /// Écart entre deux points de BullionVault (note de la bande de Bollinger).
-    var step: String {
-        switch self {
-        case .day: return "10 minutes"
-        case .week: return "1 heure"
-        case .month: return "4 heures"
-        case .year: return "2 jours"
-        case .fiveYears: return "10 jours"
-        case .tenYears: return "1 mois"
         }
     }
 }
@@ -79,41 +56,7 @@ struct MetalSeries: Codable, Equatable {
     static func failed(_ message: String) -> MetalSeries { MetalSeries(error: message) }
 }
 
-extension MetalSeries {
-    /// Points de la période seulement (BullionVault en renvoie parfois davantage), comme le site.
-    func within(_ period: Period, now: Date) -> MetalSeries {
-        let cutoff = now.addingTimeInterval(-Double(period.days) * 86_400)
-        var out = self
-        out.points = points.filter { $0.date >= cutoff }
-        if out.points.count < 2 { out.points = points }
-        return out
-    }
-}
-
-/// Bande de Bollinger du site (gold-chart.js) : moyenne des 20 derniers points ± 2 écarts-types,
-/// calculée sur tout l’historique reçu.
-struct BandPoint: Hashable {
-    let date: Date
-    let mid: Double
-    let up: Double
-    let low: Double
-}
-
-enum Bollinger {
-    static func bands(_ points: [PricePoint], n: Int = 20, k: Double = 2) -> [BandPoint] {
-        guard points.count >= n else { return [] }
-        var out: [BandPoint] = []
-        for i in (n - 1)..<points.count {
-            let w = points[(i - n + 1)...i].map(\.price)
-            let mean = w.reduce(0, +) / Double(n)
-            let sd = (w.map { ($0 - mean) * ($0 - mean) }.reduce(0, +) / Double(n)).squareRoot()
-            out.append(BandPoint(date: points[i].date, mid: mean, up: mean + k * sd, low: mean - k * sd))
-        }
-        return out
-    }
-}
-
-/// Ce qu’affichent l’écran Cours et le widget pour une période.
+/// Ce qu’affiche le widget pour une période.
 struct Snapshot: Codable, Equatable {
     var period: Period
     var updatedAt: Date

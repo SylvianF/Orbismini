@@ -51,15 +51,15 @@ enum ThemeChoice: String, CaseIterable, Identifiable {
 }
 
 struct Palette {
-    let bg1, bg2, card, line, text, muted, gold, silver, up, down, band: UInt32
+    let bg1, bg2, card, line, text, muted, gold, silver, up, down: UInt32
 
     // Couleurs calculées avec les règles de theme.js (Onyx : ardoises noircies ; Perle : clair).
     static let saphir = Palette(bg1: 0x1B2A34, bg2: 0x121D25, card: 0x1F313D, line: 0x344853, text: 0xEDF2F5,
-                                muted: 0xB5C7D3, gold: 0xE9BF75, silver: 0xD0DAE5, up: 0x8FDFB0, down: 0xFF9CA4, band: 0x9CC8F2)
+                                muted: 0xB5C7D3, gold: 0xE9BF75, silver: 0xD0DAE5, up: 0x8FDFB0, down: 0xFF9CA4)
     static let onyx = Palette(bg1: 0x202021, bg2: 0x161617, card: 0x252626, line: 0x373738, text: 0xF2F1F0,
-                              muted: 0xC5C4C3, gold: 0xE9BF75, silver: 0xDCDBD9, up: 0x8FDFB0, down: 0xFF9CA4, band: 0x9CC8F2)
+                              muted: 0xC5C4C3, gold: 0xE9BF75, silver: 0xDCDBD9, up: 0x8FDFB0, down: 0xFF9CA4)
     static let perle = Palette(bg1: 0xF7F1E6, bg2: 0xECE3D3, card: 0xFFFFFF, line: 0xD6C7AD, text: 0x21292F,
-                               muted: 0x556774, gold: 0xCA8D20, silver: 0x3A4852, up: 0x2D9F5C, down: 0xCC0010, band: 0x1868B4)
+                               muted: 0x556774, gold: 0xCA8D20, silver: 0x3A4852, up: 0x2D9F5C, down: 0xCC0010)
 }
 
 /// Couleurs du thème choisi.
@@ -81,7 +81,6 @@ enum Theme {
     static var silver: Color { Color(hex: palette.silver) }
     static var up: Color { Color(hex: palette.up) }
     static var down: Color { Color(hex: palette.down) }
-    static var band: Color { Color(hex: palette.band) }
     /// Texte posé sur un bouton or.
     static var onGold: Color { ThemeChoice.current.isLight ? .white : Color(hex: 0x18242B) }
 

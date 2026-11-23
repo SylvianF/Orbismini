@@ -82,21 +82,14 @@ private struct WebPage: UIViewRepresentable {
                 + "localStorage.setItem('orbismini-theme','\(ThemeChoice.current.rawValue)')}catch(e){}",
             injectionTime: .atDocumentStart, forMainFrameOnly: false))
         // Onglets du site cachés dès le début (l’application a les siens) ; impression confiée à l’iPhone.
-        // Vue autre que Cours : la page reste invisible jusqu’à ce que la bonne vue soit affichée
-        // (sinon la page Cours du site apparaît un instant).
-        let wait = view.map { $0 != "cours" } ?? false
         scripts.addUserScript(WKUserScript(
             source: """
             (function(){var s=document.createElement('style');
-            s.textContent='.views,header.top,#splash{display:none!important}html.om-attente body{visibility:hidden}';
+            s.textContent='.views,header.top,#splash{display:none!important}';
             document.documentElement.appendChild(s);
-            \(wait ? "document.documentElement.classList.add('om-attente');setTimeout(function(){document.documentElement.classList.remove('om-attente')},4000);" : "")
             window.print=function(){window.webkit.messageHandlers.imprimer.postMessage(1)};})();
             """,
             injectionTime: .atDocumentStart, forMainFrameOnly: true))
-        if let view {
-            scripts.addUserScript(WKUserScript(source: Self.showViewJS(view), injectionTime: .atDocumentEnd, forMainFrameOnly: true))
-        }
         scripts.add(WeakHandler(context.coordinator), name: "imprimer")
         // Photo d’une pièce de monnaie (face, revers, pièce inconnue) : appareil photo à cercle de
         // l’application. Pièce d’identité, RIB, facture : appareil photo normal de l’iPhone, comme avant.
@@ -120,16 +113,6 @@ private struct WebPage: UIViewRepresentable {
     }
 
     func updateUIView(_ web: WKWebView, context: Context) {}
-
-    /// Affiche la vue voulue du site (onglets data-view, cartes data-open de l’écran Scan), puis rend
-    /// la page visible. Sur une autre page (Orbiscan…), la rend visible sans rien toucher.
-    static func showViewJS(_ view: String) -> String {
-        "(function(){var v='\(view)';"
-            + "if(location.pathname==='/'&&document.body&&document.body.dataset.view!==v){"
-            + "var b=document.querySelector('.views button[data-view=\"'+v+'\"]')||document.querySelector('[data-open=\"'+v+'\"]');"
-            + "if(b)b.click();}"
-            + "document.documentElement.classList.remove('om-attente');})()"
-    }
 
     /// Remplace le sélecteur de photo du site par la prise de vue de l’application, puis remet la
     /// photo dans le champ, comme si elle venait du sélecteur : la page continue comme avant.
@@ -167,15 +150,11 @@ private struct WebPage: UIViewRepresentable {
         }
 
         func loadHome() {
-            var r = URLRequest(url: URL(string: path, relativeTo: Config.baseURL)?.absoluteURL ?? Config.baseURL)
+            // « ?vue=rachat » : le site s’ouvre directement sur la vue voulue (mobile.js).
+            let address = view.map { $0 == "cours" ? path : path + "?vue=" + $0 } ?? path
+            var r = URLRequest(url: URL(string: address, relativeTo: Config.baseURL)?.absoluteURL ?? Config.baseURL)
             r.timeoutInterval = 70   // Render endormi : jusqu’à une minute pour se réveiller
             web?.load(r)
-        }
-
-        /// Ouvre la vue du site voulue (mobile.js : onglets data-view, cartes data-open de l’écran Scan).
-        private func showView(_ web: WKWebView) {
-            guard let view, web.url?.host == Config.host, web.url?.path == "/" || web.url?.path == "" else { return }
-            web.evaluateJavaScript(WebPage.showViewJS(view))
         }
 
         // Prise de vue demandée par la page (photoBridge) : la photo en base64, ou rien si annulée.
@@ -195,7 +174,12 @@ private struct WebPage: UIViewRepresentable {
             return top
         }
 
-        func webView(_ web: WKWebView, didFinish navigation: WKNavigation!) { showView(web) }
+        // Retour sur « / » sans la vue (après la page du mot de passe, par exemple) : on la redemande.
+        func webView(_ web: WKWebView, didFinish navigation: WKNavigation!) {
+            guard let view, view != "cours", let url = web.url, url.host == Config.host, url.path == "/",
+                  !(url.query ?? "").contains("vue=") else { return }
+            loadHome()
+        }
 
         func webView(_ web: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) {
             guard (error as NSError).code != NSURLErrorCancelled else { return }
