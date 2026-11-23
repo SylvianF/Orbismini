@@ -57,7 +57,7 @@ heures à deux jours ; au-delà : developer.apple.com → Support → Nous conta
    iOS, nom « Orbismini », langue Français, identifiant `fr.cndo.orbismini`, référence
    « orbismini ». Si l’identifiant n’est pas dans la liste : lance d’abord la tâche TestFlight
    une fois (elle le déclare chez Apple, puis échoue à l’envoi), puis crée la fiche et relance.
-5. **Envoi** : github.com/SylvianF/Orbismini → Actions → « Application iPhone → TestFlight » →
+5. **Envoi** : une étiquette « testflight-N » posée sur la branche app-ios (Claude s’en charge), ou plus tard Actions → « Application iPhone → TestFlight » →
    Run workflow (branche `app-ios`). Après le traitement par Apple (10 à 30 minutes), installe
    l’app **TestFlight** sur l’iPhone : Orbismini y paraît. Ajoute l’autre iPhone comme testeur
    (App Store Connect → TestFlight → Testeurs internes).

@@ -9,6 +9,10 @@
 # direct à TestFlight. Rien n’est gardé : la clé est effacée à la fin de la tâche.
 name: Application iPhone → TestFlight
 on:
+  # Étiquette « testflight-… » posée sur la branche app-ios (main n'est pas touchée : Render la
+  # met en ligne). Le bouton Run workflow ne paraît que si ce fichier est aussi sur main.
+  push:
+    tags: ["testflight-*"]
   workflow_dispatch:
 jobs:
   testflight:
