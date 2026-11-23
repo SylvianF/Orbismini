@@ -81,6 +81,40 @@ jobs:
         run: |
           brew install xcodegen
           xcodegen generate
+      # Chaque envoi fabrique un certificat de développement « Created via API » sur une machine
+      # neuve ; Apple en limite le nombre. On retire donc ceux des envois précédents (eux seuls :
+      # les certificats de distribution et ceux créés à la main ne sont pas touchés).
+      - name: Anciens certificats de passage
+        run: |
+          python3 - <<'PY' || echo "::warning::Ménage des certificats de passage impossible (l'envoi continue)"
+          import base64, json, os, subprocess, time, urllib.request
+          kid, iss = os.environ["KEY_ID"], os.environ["ISSUER"]
+          key = os.path.join(os.environ["RUNNER_TEMP"], "cles", "AuthKey_%s.p8" % kid)
+          b64 = lambda b: base64.urlsafe_b64encode(b).rstrip(b"=")
+          now = int(time.time())
+          msg = b64(json.dumps({"alg": "ES256", "kid": kid, "typ": "JWT"}).encode()) + b"." + \
+              b64(json.dumps({"iss": iss, "iat": now, "exp": now + 600, "aud": "appstoreconnect-v1"}).encode())
+          der = subprocess.run(["openssl", "dgst", "-sha256", "-sign", key], input=msg, capture_output=True, check=True).stdout
+          i, rs = (2 if der[1] < 0x80 else 2 + (der[1] & 0x7F)), []
+          for _ in range(2):          # signature DER → r et s sur 32 octets chacun
+              n = der[i + 1]
+              rs.append(int.from_bytes(der[i + 2:i + 2 + n], "big").to_bytes(32, "big"))
+              i += 2 + n
+          token = (msg + b"." + b64(rs[0] + rs[1])).decode()
+          api = "https://api.appstoreconnect.apple.com/v1/certificates"
+          def call(method, url):
+              req = urllib.request.Request(url, method=method, headers={"Authorization": "Bearer " + token})
+              with urllib.request.urlopen(req, timeout=30) as f:
+                  return f.read()
+          certs = json.loads(call("GET", api + "?filter%5BcertificateType%5D=DEVELOPMENT,IOS_DEVELOPMENT&limit=200"))["data"]
+          gone = 0
+          for c in certs:
+              a = c["attributes"]
+              if "Created via API" in (a.get("name") or "") + (a.get("displayName") or ""):
+                  call("DELETE", api + "/" + c["id"])
+                  gone += 1
+          print("::notice::Certificats de développement de passage retirés : %d sur %d" % (gone, len(certs)))
+          PY
       - name: Archive signée
         run: |
           mkdir -p build
