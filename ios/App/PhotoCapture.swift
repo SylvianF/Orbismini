@@ -1,54 +1,29 @@
 import AVFoundation
 import SwiftUI
 import UIKit
-import VisionKit
 
-/// Ce que la page web demande de photographier (boutons « Photographier… » du site et d’Orbiscan).
-enum PhotoKind: String {
-    case piece       // pièce de monnaie : appareil photo avec un cercle de cadrage
-    case identite    // pièce d’identité, RIB, facture : scanner de documents d’Apple
-    case rib
-    case facture
-
-    var usesDocumentScanner: Bool { self != .piece }
-}
-
-/// Prise de vue native pour les pages web de l’application. La photo repart dans la page, qui la
-/// traite comme avant (Orbiscan la chiffre sur le téléphone avec la clé du PC).
+/// Photo d’une pièce de monnaie pour les pages web de l’application (face et revers d’Orbiscan,
+/// pièce inconnue) : appareil photo avec un cercle de cadrage. La photo repart dans la page, qui la
+/// traite comme avant. Pièce d’identité, RIB et facture gardent l’appareil photo normal de l’iPhone
+/// (le détourage est fait ensuite par l’extension, sur le PC).
 @MainActor
 final class PhotoCapture: NSObject {
     static let shared = PhotoCapture()
-    private var done: (([Data]) -> Void)?
-    private var kind: PhotoKind = .piece
+    private var done: ((Data?) -> Void)?
 
-    /// `done` reçoit les photos prises : une seule, sauf pour une pièce d’identité scannée des deux
-    /// côtés d’un coup (recto puis verso), et rien si c’est annulé.
-    func take(_ kind: PhotoKind, from host: UIViewController, done: @escaping ([Data]) -> Void) {
-        self.done?([])
+    func takeCoin(from host: UIViewController, done: @escaping (Data?) -> Void) {
+        self.done?(nil)
         self.done = done
-        self.kind = kind
-        let hasCamera = UIImagePickerController.isSourceTypeAvailable(.camera)
-        guard hasCamera else { return presentLibrary(from: host) }   // simulateur
+        guard UIImagePickerController.isSourceTypeAvailable(.camera) else { return presentLibrary(from: host) }   // simulateur
         Task {
             guard await Self.cameraAllowed() else { return self.refused(from: host) }
-            if kind.usesDocumentScanner, VNDocumentCameraViewController.isSupported {
-                let scanner = VNDocumentCameraViewController()
-                scanner.delegate = self
-                host.present(scanner, animated: true)
-            } else if kind == .piece {
-                let camera = CoinCameraController()
-                camera.onDone = { [weak self, weak camera] image in
-                    camera?.dismiss(animated: true)
-                    self?.finish(image)
-                }
-                camera.modalPresentationStyle = .fullScreen
-                host.present(camera, animated: true)
-            } else {
-                let picker = UIImagePickerController()
-                picker.sourceType = .camera
-                picker.delegate = self
-                host.present(picker, animated: true)
+            let camera = CoinCameraController()
+            camera.onDone = { [weak self, weak camera] image in
+                camera?.dismiss(animated: true)
+                self?.finish(image)
             }
+            camera.modalPresentationStyle = .fullScreen
+            host.present(camera, animated: true)
         }
     }
 
@@ -80,12 +55,7 @@ final class PhotoCapture: NSObject {
     }
 
     fileprivate func finish(_ image: UIImage?) {
-        finish(image.map { [$0] } ?? [])
-    }
-
-    fileprivate func finish(_ images: [UIImage]) {
-        let keep = kind == .identite ? 2 : 1
-        done?(images.prefix(keep).compactMap { Self.jpeg($0) })
+        done?(image.flatMap { Self.jpeg($0) })
         done = nil
     }
 
@@ -100,33 +70,6 @@ final class PhotoCapture: NSObject {
             image.draw(in: CGRect(origin: .zero, size: target))
         }
         return resized.jpegData(compressionQuality: 0.85)
-    }
-}
-
-extension PhotoCapture: VNDocumentCameraViewControllerDelegate {
-    nonisolated func documentCameraViewController(_ controller: VNDocumentCameraViewController,
-                                                  didFinishWith scan: VNDocumentCameraScan) {
-        // Pièce d’identité : les deux côtés peuvent être scannés d’un coup (pages 1 et 2).
-        let images = (0..<min(scan.pageCount, 2)).map { scan.imageOfPage(at: $0) }
-        Task { @MainActor in
-            controller.dismiss(animated: true)
-            self.finish(images)
-        }
-    }
-
-    nonisolated func documentCameraViewControllerDidCancel(_ controller: VNDocumentCameraViewController) {
-        Task { @MainActor in
-            controller.dismiss(animated: true)
-            self.finish(nil)
-        }
-    }
-
-    nonisolated func documentCameraViewController(_ controller: VNDocumentCameraViewController,
-                                                  didFailWithError error: Error) {
-        Task { @MainActor in
-            controller.dismiss(animated: true)
-            self.finish(nil)
-        }
     }
 }
 

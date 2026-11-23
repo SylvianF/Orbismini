@@ -81,18 +81,25 @@ private struct WebPage: UIViewRepresentable {
             source: "try{localStorage.setItem('orbismini-appareil','\(Secrets.deviceID)');"
                 + "localStorage.setItem('orbismini-theme','\(ThemeChoice.current.rawValue)')}catch(e){}",
             injectionTime: .atDocumentStart, forMainFrameOnly: false))
-        // Onglets du site cachés (l’application a les siens) ; impression confiée à l’iPhone.
+        // Onglets du site cachés dès le début (l’application a les siens) ; impression confiée à l’iPhone.
+        // Vue autre que Cours : la page reste invisible jusqu’à ce que la bonne vue soit affichée
+        // (sinon la page Cours du site apparaît un instant).
+        let wait = view.map { $0 != "cours" } ?? false
         scripts.addUserScript(WKUserScript(
             source: """
             (function(){var s=document.createElement('style');
-            s.textContent='.views,header.top,#splash{display:none!important}';
-            (document.head||document.documentElement).appendChild(s);
+            s.textContent='.views,header.top,#splash{display:none!important}html.om-attente body{visibility:hidden}';
+            document.documentElement.appendChild(s);
+            \(wait ? "document.documentElement.classList.add('om-attente');setTimeout(function(){document.documentElement.classList.remove('om-attente')},4000);" : "")
             window.print=function(){window.webkit.messageHandlers.imprimer.postMessage(1)};})();
             """,
-            injectionTime: .atDocumentEnd, forMainFrameOnly: true))
+            injectionTime: .atDocumentStart, forMainFrameOnly: true))
+        if let view {
+            scripts.addUserScript(WKUserScript(source: Self.showViewJS(view), injectionTime: .atDocumentEnd, forMainFrameOnly: true))
+        }
         scripts.add(WeakHandler(context.coordinator), name: "imprimer")
-        // Boutons « Photographier… » : appareil photo de l’application (cercle pour les pièces,
-        // scanner de documents pour pièce d’identité, RIB et facture), dans la page et dans Orbiscan.
+        // Photo d’une pièce de monnaie (face, revers, pièce inconnue) : appareil photo à cercle de
+        // l’application. Pièce d’identité, RIB, facture : appareil photo normal de l’iPhone, comme avant.
         scripts.addUserScript(WKUserScript(source: Self.photoBridge, injectionTime: .atDocumentEnd, forMainFrameOnly: false))
         scripts.addScriptMessageHandler(WeakReplyHandler(context.coordinator), contentWorld: .page, name: "photo")
 
@@ -114,6 +121,16 @@ private struct WebPage: UIViewRepresentable {
 
     func updateUIView(_ web: WKWebView, context: Context) {}
 
+    /// Affiche la vue voulue du site (onglets data-view, cartes data-open de l’écran Scan), puis rend
+    /// la page visible. Sur une autre page (Orbiscan…), la rend visible sans rien toucher.
+    static func showViewJS(_ view: String) -> String {
+        "(function(){var v='\(view)';"
+            + "if(location.pathname==='/'&&document.body&&document.body.dataset.view!==v){"
+            + "var b=document.querySelector('.views button[data-view=\"'+v+'\"]')||document.querySelector('[data-open=\"'+v+'\"]');"
+            + "if(b)b.click();}"
+            + "document.documentElement.classList.remove('om-attente');})()"
+    }
+
     /// Remplace le sélecteur de photo du site par la prise de vue de l’application, puis remet la
     /// photo dans le champ, comme si elle venait du sélecteur : la page continue comme avant.
     static let photoBridge = """
@@ -121,46 +138,18 @@ private struct WebPage: UIViewRepresentable {
       if (window.__orbisminiPhoto) return; window.__orbisminiPhoto = 1;
       var h = window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.photo;
       if (!h) return;
-      function kind(i) {
-        if (i.closest('#piece-sides, .cs-shot')) return 'piece';
-        if (i.closest('#id-sides')) return 'identite';
-        if (i.closest('#rib-side')) return 'rib';
-        if (i.closest('#facture-side')) return 'facture';
-        return null;
-      }
-      function put(i, b64) {
-        var bin = atob(b64), bytes = new Uint8Array(bin.length);
-        for (var n = 0; n < bin.length; n++) bytes[n] = bin.charCodeAt(n);
-        var dt = new DataTransfer();
-        dt.items.add(new File([bytes], 'photo.jpg', { type: 'image/jpeg', lastModified: Date.now() }));
-        i.files = dt.files;
-        i.dispatchEvent(new Event('change', { bubbles: true }));
-      }
-      // Pièce d'identité scannée des deux côtés d'un coup : la 2e page attend que la page
-      // demande le verso (elle le fait seule après le recto) et y va sans rouvrir le scanner.
-      var verso = null;
       document.addEventListener('click', function (e) {
         var i = e.target;
-        if (!(i instanceof HTMLInputElement) || i.type !== 'file') return;
-        var k = kind(i);
-        if (!k) return;
+        if (!(i instanceof HTMLInputElement) || i.type !== 'file' || !i.closest('#piece-sides, .cs-shot')) return;
         e.preventDefault(); e.stopPropagation();
-        if (verso && i.closest('[data-side=verso]') && Date.now() - verso.at < 60000) {
-          var b = verso.b64; verso = null;
-          setTimeout(function () { put(i, b); }, 0);
-          return;
-        }
-        verso = null;
-        h.postMessage({ kind: k }).then(function (r) {
-          var pages = Array.isArray(r) ? r : (r ? [r] : []);
-          if (!pages.length) return;
-          if (pages.length > 1 && i.closest('[data-side=recto]')) verso = { b64: pages[1], at: Date.now() };
-          put(i, pages[0]);
-          // Page qui n'enchaîne pas d'elle-même sur le verso : on le remplit quand même.
-          setTimeout(function () {
-            var v = verso && document.querySelector('#id-sides [data-side=verso] input');
-            if (v) { var b = verso.b64; verso = null; put(v, b); }
-          }, 400);
+        h.postMessage({ kind: 'piece' }).then(function (b64) {
+          if (!b64) return;
+          var bin = atob(b64), bytes = new Uint8Array(bin.length);
+          for (var n = 0; n < bin.length; n++) bytes[n] = bin.charCodeAt(n);
+          var dt = new DataTransfer();
+          dt.items.add(new File([bytes], 'photo.jpg', { type: 'image/jpeg', lastModified: Date.now() }));
+          i.files = dt.files;
+          i.dispatchEvent(new Event('change', { bubbles: true }));
         }).catch(function () {});
       }, true);
     })();
@@ -186,22 +175,16 @@ private struct WebPage: UIViewRepresentable {
         /// Ouvre la vue du site voulue (mobile.js : onglets data-view, cartes data-open de l’écran Scan).
         private func showView(_ web: WKWebView) {
             guard let view, web.url?.host == Config.host, web.url?.path == "/" || web.url?.path == "" else { return }
-            let js = "(function(){var v='\(view)';if(document.body.dataset.view===v)return;"
-                + "var b=document.querySelector('.views button[data-view=\"'+v+'\"]')||document.querySelector('[data-open=\"'+v+'\"]');"
-                + "if(b)b.click();})()"
-            web.evaluateJavaScript(js)
+            web.evaluateJavaScript(WebPage.showViewJS(view))
         }
 
         // Prise de vue demandée par la page (photoBridge) : la photo en base64, ou rien si annulée.
         func userContentController(_ controller: WKUserContentController, didReceive message: WKScriptMessage,
                                    replyHandler: @escaping (Any?, String?) -> Void) {
-            let raw = (message.body as? [String: Any])?["kind"] as? String ?? ""
-            guard let kind = PhotoKind(rawValue: raw), let web, let host = Self.top(of: web) else {
-                return replyHandler(nil, nil)
-            }
+            guard let web, let host = Self.top(of: web) else { return replyHandler(nil, nil) }
             Task { @MainActor in
-                PhotoCapture.shared.take(kind, from: host) { photos in
-                    replyHandler(photos.map { $0.base64EncodedString() }, nil)
+                PhotoCapture.shared.takeCoin(from: host) { data in
+                    replyHandler(data?.base64EncodedString(), nil)
                 }
             }
         }
