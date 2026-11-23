@@ -82,8 +82,8 @@ jobs:
             name=$screen; [ "$theme" != dark ] && name=$screen-$theme
             xcrun simctl terminate "$UDID" fr.cndo.orbismini 2>/dev/null || true
             xcrun simctl launch "$UDID" fr.cndo.orbismini -demo -ecran "$screen" -theme "$theme"
-            # Pages web (Rachat) : le serveur Render peut mettre une minute à se réveiller.
-            if [ "$screen" = rachat ]; then sleep 45; else sleep 6; fi
+            # Pages web (Cours, Rachat) : le serveur Render peut mettre une minute à se réveiller.
+            if [ "$screen" = rachat ] || [ "$screen" = cours ]; then sleep 45; else sleep 6; fi
             xcrun simctl io "$UDID" screenshot "../captures/$name.png"
           done
           ls -la ../captures

@@ -4,13 +4,12 @@ Dépôt SylvianF/Orbismini, branche `app-ios` seulement : rien ici ne change le 
 
 ## Ce qu’il y a
 
-- **Cours** (natif) : or et argent pur au kilo, variation, courbe (1 jour, 7 jours, 1 mois, 1 an),
-  lecture du cours au doigt sur la courbe. Derniers cours gardés : affichés hors connexion, avec
-  l’heure. Quand Render dort, l’application patiente (jusqu’à 3 essais) et le dit.
+- **Cours** : la page « Cours » du site (courbes de l’or et de l’argent, pièces et lingots), avec
+  en haut la cloche de l’alerte de cours et la roue des réglages (thème, widget).
 - **Météo de l’or** (natif), **Alerte de cours** (natif, même alerte que le site sur ce téléphone).
 - **Widget** : petit, moyen, grand ; or ou argent, période au choix (appui long → Modifier le
   widget). Même contenu que le widget Scriptable. Toucher = ouvrir l’application.
-- **Scan, Rachat, Chiffres**, et la liste des pièces et lingots : les pages du site, dans
+- **Scan, Rachat, Chiffres** : les pages du site, dans
   l’application, avec la même connexion. La barre d’onglets du site y est cachée.
 - **Notifications d’Apple** pour les alertes : à côté de ntfy (qui reste pour le Samsung),
   éteintes tant que Render n’a pas `ORBISMINI_APNS=1`.
@@ -76,7 +75,7 @@ heures à deux jours ; au-delà : developer.apple.com → Support → Nous conta
 3. Render → Settings → Build Command : `pip install -r requirements.txt || echo Ready`
    (installe les deux bibliothèques des notifications ; si elles manquent, le site marche quand même).
 
-Ensuite, dans l’application : Cours → Alerte de cours → « Recevoir les alertes sur cet iPhone ».
+Ensuite, dans l’application : Cours → cloche en haut → « Recevoir les alertes sur cet iPhone ».
 L’écran dit si les alertes arrivent dans l’application ou encore par ntfy.
 
 ## Identifiants choisis

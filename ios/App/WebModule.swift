@@ -128,20 +128,39 @@ private struct WebPage: UIViewRepresentable {
         if (i.closest('#facture-side')) return 'facture';
         return null;
       }
+      function put(i, b64) {
+        var bin = atob(b64), bytes = new Uint8Array(bin.length);
+        for (var n = 0; n < bin.length; n++) bytes[n] = bin.charCodeAt(n);
+        var dt = new DataTransfer();
+        dt.items.add(new File([bytes], 'photo.jpg', { type: 'image/jpeg', lastModified: Date.now() }));
+        i.files = dt.files;
+        i.dispatchEvent(new Event('change', { bubbles: true }));
+      }
+      // Pièce d'identité scannée des deux côtés d'un coup : la 2e page attend que la page
+      // demande le verso (elle le fait seule après le recto) et y va sans rouvrir le scanner.
+      var verso = null;
       document.addEventListener('click', function (e) {
         var i = e.target;
         if (!(i instanceof HTMLInputElement) || i.type !== 'file') return;
         var k = kind(i);
         if (!k) return;
         e.preventDefault(); e.stopPropagation();
-        h.postMessage({ kind: k }).then(function (b64) {
-          if (!b64) return;
-          var bin = atob(b64), bytes = new Uint8Array(bin.length);
-          for (var n = 0; n < bin.length; n++) bytes[n] = bin.charCodeAt(n);
-          var dt = new DataTransfer();
-          dt.items.add(new File([bytes], 'photo.jpg', { type: 'image/jpeg', lastModified: Date.now() }));
-          i.files = dt.files;
-          i.dispatchEvent(new Event('change', { bubbles: true }));
+        if (verso && i.closest('[data-side=verso]') && Date.now() - verso.at < 60000) {
+          var b = verso.b64; verso = null;
+          setTimeout(function () { put(i, b); }, 0);
+          return;
+        }
+        verso = null;
+        h.postMessage({ kind: k }).then(function (r) {
+          var pages = Array.isArray(r) ? r : (r ? [r] : []);
+          if (!pages.length) return;
+          if (pages.length > 1 && i.closest('[data-side=recto]')) verso = { b64: pages[1], at: Date.now() };
+          put(i, pages[0]);
+          // Page qui n'enchaîne pas d'elle-même sur le verso : on le remplit quand même.
+          setTimeout(function () {
+            var v = verso && document.querySelector('#id-sides [data-side=verso] input');
+            if (v) { var b = verso.b64; verso = null; put(v, b); }
+          }, 400);
         }).catch(function () {});
       }, true);
     })();
@@ -181,8 +200,8 @@ private struct WebPage: UIViewRepresentable {
                 return replyHandler(nil, nil)
             }
             Task { @MainActor in
-                PhotoCapture.shared.take(kind, from: host) { data in
-                    replyHandler(data?.base64EncodedString(), nil)
+                PhotoCapture.shared.take(kind, from: host) { photos in
+                    replyHandler(photos.map { $0.base64EncodedString() }, nil)
                 }
             }
         }

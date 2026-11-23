@@ -18,11 +18,15 @@ enum PhotoKind: String {
 @MainActor
 final class PhotoCapture: NSObject {
     static let shared = PhotoCapture()
-    private var done: ((Data?) -> Void)?
+    private var done: (([Data]) -> Void)?
+    private var kind: PhotoKind = .piece
 
-    func take(_ kind: PhotoKind, from host: UIViewController, done: @escaping (Data?) -> Void) {
-        self.done?(nil)
+    /// `done` reçoit les photos prises : une seule, sauf pour une pièce d’identité scannée des deux
+    /// côtés d’un coup (recto puis verso), et rien si c’est annulé.
+    func take(_ kind: PhotoKind, from host: UIViewController, done: @escaping ([Data]) -> Void) {
+        self.done?([])
         self.done = done
+        self.kind = kind
         let hasCamera = UIImagePickerController.isSourceTypeAvailable(.camera)
         guard hasCamera else { return presentLibrary(from: host) }   // simulateur
         Task {
@@ -76,8 +80,12 @@ final class PhotoCapture: NSObject {
     }
 
     fileprivate func finish(_ image: UIImage?) {
-        let data = image.flatMap { Self.jpeg($0) }
-        done?(data)
+        finish(image.map { [$0] } ?? [])
+    }
+
+    fileprivate func finish(_ images: [UIImage]) {
+        let keep = kind == .identite ? 2 : 1
+        done?(images.prefix(keep).compactMap { Self.jpeg($0) })
         done = nil
     }
 
@@ -98,10 +106,11 @@ final class PhotoCapture: NSObject {
 extension PhotoCapture: VNDocumentCameraViewControllerDelegate {
     nonisolated func documentCameraViewController(_ controller: VNDocumentCameraViewController,
                                                   didFinishWith scan: VNDocumentCameraScan) {
-        let image = scan.pageCount > 0 ? scan.imageOfPage(at: 0) : nil
+        // Pièce d’identité : les deux côtés peuvent être scannés d’un coup (pages 1 et 2).
+        let images = (0..<min(scan.pageCount, 2)).map { scan.imageOfPage(at: $0) }
         Task { @MainActor in
             controller.dismiss(animated: true)
-            self.finish(image)
+            self.finish(images)
         }
     }
 
