@@ -91,8 +91,8 @@ private struct WebPage: UIViewRepresentable {
             """,
             injectionTime: .atDocumentStart, forMainFrameOnly: true))
         scripts.add(WeakHandler(context.coordinator), name: "imprimer")
-        // Photo d’une pièce de monnaie (face, revers, pièce inconnue) : appareil photo à cercle de
-        // l’application. Pièce d’identité, RIB, facture : appareil photo normal de l’iPhone, comme avant.
+        // Photo d’une pièce de monnaie (cercle) ou d’une pièce d’identité (cadre, recto puis verso) :
+        // appareil photo de l’application. RIB et facture : appareil photo normal de l’iPhone.
         scripts.addUserScript(WKUserScript(source: Self.photoBridge, injectionTime: .atDocumentEnd, forMainFrameOnly: false))
         scripts.addScriptMessageHandler(WeakReplyHandler(context.coordinator), contentWorld: .page, name: "photo")
 
@@ -123,18 +123,50 @@ private struct WebPage: UIViewRepresentable {
       if (window.__orbisminiPhoto) return; window.__orbisminiPhoto = 1;
       var h = window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.photo;
       if (!h) return;
+      function put(i, b64) {
+        var bin = atob(b64), bytes = new Uint8Array(bin.length);
+        for (var n = 0; n < bin.length; n++) bytes[n] = bin.charCodeAt(n);
+        var dt = new DataTransfer();
+        dt.items.add(new File([bytes], 'photo.jpg', { type: 'image/jpeg', lastModified: Date.now() }));
+        i.files = dt.files;
+        i.dispatchEvent(new Event('change', { bubbles: true }));
+      }
+      // Pièce d'identité : recto et verso sont pris d'affilée dans l'application. Après le recto, la page
+      // demande d'elle-même le verso : il lui est donné sans rouvrir l'appareil photo (verso), ou la
+      // demande est ignorée s'il n'y a pas de verso (passeport, arrêt).
+      var verso = null, sansVerso = 0;
       document.addEventListener('click', function (e) {
         var i = e.target;
-        if (!(i instanceof HTMLInputElement) || i.type !== 'file' || !i.closest('#piece-sides, .cs-shot')) return;
+        if (!(i instanceof HTMLInputElement) || i.type !== 'file') return;
+        var k = i.closest('#piece-sides, .cs-shot') ? 'piece' : i.closest('#id-sides') ? 'identite' : null;
+        if (!k) return;
         e.preventDefault(); e.stopPropagation();
-        h.postMessage({ kind: 'piece' }).then(function (b64) {
-          if (!b64) return;
-          var bin = atob(b64), bytes = new Uint8Array(bin.length);
-          for (var n = 0; n < bin.length; n++) bytes[n] = bin.charCodeAt(n);
-          var dt = new DataTransfer();
-          dt.items.add(new File([bytes], 'photo.jpg', { type: 'image/jpeg', lastModified: Date.now() }));
-          i.files = dt.files;
-          i.dispatchEvent(new Event('change', { bubbles: true }));
+        var box = i.closest('[data-side]'), side = box ? box.dataset.side : '';
+        if (side === 'verso') {
+          if (verso && Date.now() - verso.at < 60000) {
+            var b = verso.b64; verso = null;
+            setTimeout(function () { put(i, b); }, 0);
+            return;
+          }
+          if (Date.now() < sansVerso) { sansVerso = 0; return; }
+        }
+        verso = null; sansVerso = 0;
+        var deux = side === 'recto' && !document.querySelector('#id-sides [data-side=verso] .state.ok');
+        h.postMessage({ kind: k, deux: deux }).then(function (r) {
+          if (!r || !r.pages || !r.pages.length) return;
+          if (deux) {
+            if (r.pages.length > 1) verso = { b64: r.pages[1], at: Date.now() };
+            else sansVerso = Date.now() + 3000;
+          }
+          put(i, r.pages[0]);
+          if (r.fin === 'passeport') {
+            // « Passeport : une seule page » de la page, dès que le recto est envoyé.
+            var tries = 0, t = setInterval(function () {
+              var one = document.getElementById('one-page');
+              if (one && !one.hidden) { clearInterval(t); one.click(); }
+              else if (++tries > 100) clearInterval(t);
+            }, 200);
+          }
         }).catch(function () {});
       }, true);
     })();
@@ -162,10 +194,15 @@ private struct WebPage: UIViewRepresentable {
         // Prise de vue demandée par la page (photoBridge) : la photo en base64, ou rien si annulée.
         func userContentController(_ controller: WKUserContentController, didReceive message: WKScriptMessage,
                                    replyHandler: @escaping (Any?, String?) -> Void) {
-            guard let web, let host = Self.top(of: web) else { return replyHandler(nil, nil) }
+            let body = message.body as? [String: Any]
+            guard let kind = PhotoKind(rawValue: body?["kind"] as? String ?? ""), let web, let host = Self.top(of: web) else {
+                return replyHandler(nil, nil)
+            }
+            let both = body?["deux"] as? Bool ?? false
             Task { @MainActor in
-                PhotoCapture.shared.takeCoin(from: host) { data in
-                    replyHandler(data?.base64EncodedString(), nil)
+                PhotoCapture.shared.take(kind, bothSides: both, from: host) { result in
+                    let answer: [String: Any] = ["pages": result.photos.map { $0.base64EncodedString() }, "fin": result.end]
+                    replyHandler(answer, nil)
                 }
             }
         }

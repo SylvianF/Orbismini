@@ -50,6 +50,15 @@ struct SettingsView: View {
                     WidgetCenter.shared.reloadAllTimelines()
                 }
             }
+            if let quality = UserDefaults.standard.string(forKey: PhotoCapture.lastQualityKey) {
+                Section {
+                    Text(quality).font(.footnote)
+                } header: {
+                    Text("Dernière pièce d’identité photographiée")
+                } footer: {
+                    Text("Sert à régler l’alerte « photo floue » (en dessous de \(Int(PhotoQuality.minSharpness))) et « reflet » (au-dessus de \(Int(PhotoQuality.maxGlare)) %).")
+                }
+            }
             Section {
                 Link("Ouvrir Orbismini dans Safari", destination: Config.baseURL)
                 LabeledContent("Version", value: version)
