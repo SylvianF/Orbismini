@@ -338,15 +338,13 @@ final class FramedCameraController: UIViewController, AVCapturePhotoCaptureDeleg
     private func prepare(_ d: AVCaptureDevice) {
         guard (try? d.lockForConfiguration()) != nil else { return }
         // « 1× » = l’objectif principal (sur un appareil à plusieurs objectifs, le zoom 1 est l’ultra grand-angle
-        // quand il y en a un). Pièce de monnaie : 1×. Pièce d’identité : 2×, comme le conseille la page du
-        // relais : on recule, la carte est plus nette, moins déformée et moins dans l’ombre du téléphone.
+        // quand il y en a un). Pas de zoom 2× pour les pièces d’identité : plus difficile à cadrer (essai de Sylvian).
         var one: CGFloat = 1
         if d.deviceType == .builtInTripleCamera || d.deviceType == .builtInDualWideCamera,
            let wide = d.virtualDeviceSwitchOverVideoZoomFactors.first?.doubleValue {
             one = CGFloat(wide)
         }
-        let wanted = isCard ? one * 2 : one
-        d.videoZoomFactor = min(max(wanted, d.minAvailableVideoZoomFactor), d.maxAvailableVideoZoomFactor)
+        d.videoZoomFactor = min(max(one, d.minAvailableVideoZoomFactor), d.maxAvailableVideoZoomFactor)
         if !isCard, d.isAutoFocusRangeRestrictionSupported { d.autoFocusRangeRestriction = .near }
         if d.isSmoothAutoFocusSupported { d.isSmoothAutoFocusEnabled = false }
         if d.isFocusModeSupported(.continuousAutoFocus) { d.focusMode = .continuousAutoFocus }
