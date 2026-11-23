@@ -3,12 +3,12 @@
   // Deux vues : Cours (cotations seules) et Rachat (tous les calculs).
   const nav = document.querySelector('.views');
   // Écran affiché ; tab : onglet allumé (Pièces et Ticket restent sous « Scan »).
-  function showView(view, tab = view) {
+  function showView(view, tab = view, quiet = false) {
     if (typeof selected !== 'undefined' && selected) closeBuy();
     document.body.dataset.view = view;
     for (const v of ['cours', 'scans', 'scan', 'meteo', 'rachat', 'ticket', 'chiffres'])
       document.getElementById('view-' + v).hidden = view !== v;
-    window.dispatchEvent(new Event('view-changed'));
+    if (!quiet) window.dispatchEvent(new Event('view-changed'));
     nav.querySelectorAll('button[data-view]').forEach(x => x.setAttribute('aria-pressed', String(x.dataset.view === tab)));
     window.scrollTo({ top: 0, behavior: 'instant' });
   }
@@ -27,6 +27,14 @@
   window.addEventListener('popstate', () => {
     if (['scan', 'ticket'].includes(document.body.dataset.view)) showView('scans');
   });
+  // « ?vue=rachat » (application iPhone) : la page s'ouvre directement sur cette vue. Les scripts
+  // chargés après celui-ci (chiffres.js, ticket.js…) sont prévenus une fois la page entière lue.
+  const asked = new URLSearchParams(location.search).get('vue');
+  if (['scans', 'scan', 'meteo', 'rachat', 'ticket', 'chiffres'].includes(asked)) {
+    showView(asked, ['scan', 'ticket'].includes(asked) ? 'scans' : asked, true);
+    document.addEventListener('DOMContentLoaded', () => window.dispatchEvent(new Event('view-changed')));
+  }
+  delete document.documentElement.dataset.vue;
   const hero = document.querySelector('.hero'),
     info = document.createElement('div');
   info.className = 'price18-info';

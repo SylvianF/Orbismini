@@ -46,6 +46,10 @@ main {
 [hidden] {
   display: none !important;
 }
+/* « ?vue=… » : Cours caché jusqu'à l'ouverture de la vue demandée (theme.js, mobile.js). */
+html[data-vue] #view-cours {
+  display: none !important;
+}
 h1,
 h2,
 h3,

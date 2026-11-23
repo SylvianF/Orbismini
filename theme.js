@@ -323,4 +323,10 @@
     scan(document.documentElement);
     mountToggle();
   });
+  // « ?vue=rachat » (application iPhone) : mobile.js ouvre directement cette vue ; d'ici là, la vue
+  // Cours reste cachée (style.css), pour ne pas apparaître un instant.
+  try {
+    const vue = new URLSearchParams(location.search).get('vue');
+    if (vue && vue !== 'cours') document.documentElement.dataset.vue = vue;
+  } catch { /* adresse illisible : rien */ }
 })();

@@ -1,5 +1,11 @@
 # Historique
 
+## 23/11/2026 — Ouverture directe sur une vue (`?vue=`)
+
+- `/?vue=rachat` (ou `meteo`, `scans`, `scan`, `ticket`, `chiffres`) ouvre la page directement sur
+  cette vue, sans passer un instant par Cours. Sert à l'application iPhone, qui montre chaque
+  vue du site dans son propre onglet. Sans `?vue=`, rien ne change.
+
 ## 21/11/2026 — Chiffres : le détail ouvert ne se referme plus tout seul
 
 - Le contrôle de chaque minute ne redessine l'écran que si de nouveaux chiffres sont arrivés, et
