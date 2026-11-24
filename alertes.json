@@ -8,7 +8,8 @@
     }
    ],
    "events": [
-    "virement"
+    "virement",
+    "transfert"
    ],
    "nom": "cO6TnRqZGw_SnltEBurkmM6XlVxQUAup3ka_whoV57TTTjnee0Jpr9o=",
    "seen": "2026-11-24",
