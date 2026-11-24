@@ -74,8 +74,7 @@ struct ScanView: View {
             }
             .buttonStyle(.plain)
             .orbisminiBackground()
-            .navigationTitle("Scan")
-            .navigationBarTitleDisplayMode(.inline)
+            .tabHeader("Scan")
             .refreshable { await model.load() }
             .task { await model.load() }
         }

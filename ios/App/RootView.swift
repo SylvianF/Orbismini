@@ -20,10 +20,10 @@ struct RootView: View {
                     ScanView()
                         .tabItem { Label("Scan", systemImage: "viewfinder") }
                         .tag(AppModel.Tab.scan)
-                    WebModuleView(view: "rachat", title: "Rachat")
+                    NavigationStack { WebModuleView(view: "rachat", title: "Rachat").tabHeader("Rachat") }
                         .tabItem { Label("Rachat", systemImage: "list.bullet.rectangle") }
                         .tag(AppModel.Tab.rachat)
-                    WebModuleView(view: "chiffres", title: "Chiffres")
+                    NavigationStack { WebModuleView(view: "chiffres", title: "Chiffres").tabHeader("Chiffres") }
                         .tabItem { Label("Chiffres", systemImage: "chart.bar") }
                         .tag(AppModel.Tab.chiffres)
                 }
@@ -47,12 +47,16 @@ struct RootView: View {
         tab.backgroundColor = UIColor(Theme.bg2)
         UITabBar.appearance().standardAppearance = tab
         UITabBar.appearance().scrollEdgeAppearance = tab
+        // Même barre du haut partout : unie, de la couleur du fond, sans trait.
         let nav = UINavigationBarAppearance()
-        nav.configureWithTransparentBackground()
+        nav.configureWithOpaqueBackground()
+        nav.backgroundColor = UIColor(Theme.bg2)
+        nav.shadowColor = .clear
         nav.titleTextAttributes = [.foregroundColor: UIColor(Theme.text)]
         nav.largeTitleTextAttributes = [.foregroundColor: UIColor(Theme.text)]
         UINavigationBar.appearance().standardAppearance = nav
         UINavigationBar.appearance().scrollEdgeAppearance = nav
+        UINavigationBar.appearance().compactAppearance = nav
     }
 }
 
@@ -113,8 +117,30 @@ struct Card<Content: View>: View {
 }
 
 extension View {
-    /// Fond d’Orbismini derrière une liste ou un défilement.
+    /// Fond d’Orbismini derrière une liste ou un défilement : uni, le même que les pages du site.
     func orbisminiBackground() -> some View {
-        scrollContentBackground(.hidden).background(Theme.background.ignoresSafeArea())
+        scrollContentBackground(.hidden).background(Theme.bg2.ignoresSafeArea())
+    }
+
+    /// En-tête commun aux cinq onglets : petit titre centré, cloche (alerte de cours) et roue (réglages).
+    func tabHeader(_ title: String) -> some View { modifier(TabHeader(title: title)) }
+}
+
+private struct TabHeader: ViewModifier {
+    @EnvironmentObject private var app: AppModel
+    let title: String
+
+    func body(content: Content) -> some View {
+        content
+            .navigationTitle(title)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItemGroup(placement: .topBarTrailing) {
+                    Button { app.showAlert = true } label: { Image(systemName: "bell") }
+                        .accessibilityLabel("Alerte de cours")
+                    Button { app.showSettings = true } label: { Image(systemName: "gearshape") }
+                        .accessibilityLabel("Réglages")
+                }
+            }
     }
 }

@@ -62,10 +62,11 @@ struct MeteoView: View {
                         Text("Météo de l’or indisponible pour le moment.").foregroundStyle(Theme.muted)
                     }
                 }
-                .padding(16)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 8)
             }
             .orbisminiBackground()
-            .navigationTitle("Météo de l’or")
+            .tabHeader("Météo de l’or")
             .refreshable { await model.refresh() }
             .task { await model.refresh() }
         }
