@@ -1,5 +1,11 @@
 # Historique
 
+## 24/11/2026 — Application iPhone : envoi automatique à TestFlight tous les deux mois
+
+- `.github/workflows/ios-testflight.yml` copié sur main : le 1er des mois impairs, l'application
+  (branche `app-ios`) est renvoyée à TestFlight, pour que la version installée n'expire jamais
+  (90 jours). GitHub ne lance les tâches programmées que depuis main. Rien ne change pour le site.
+
 ## 23/11/2026 — Ouverture directe sur une vue (`?vue=`)
 
 - `/?vue=rachat` (ou `meteo`, `scans`, `scan`, `ticket`, `chiffres`) ouvre la page directement sur

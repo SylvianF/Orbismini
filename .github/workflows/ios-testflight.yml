@@ -1,0 +1,168 @@
+# Application iPhone vers TestFlight. Lancée par une étiquette « testflight-N » posée sur app-ios,
+# et toute seule le 1er des mois impairs : une version TestFlight expire au bout de 90 jours,
+# cet envoi la renouvelle même sans changement (au plus 62 jours d'écart).
+# L'envoi programmé ne part que de main (règle de GitHub) : ce fichier y est aussi, et il construit
+# alors la branche app-ios (là où vit l'application tant qu'elle n'est pas fusionnée dans main).
+# Secrets du dépôt (Settings → Secrets and variables → Actions), saisis par Sylvian :
+#   APPLE_TEAM_ID     identifiant d’équipe Apple (10 caractères)
+#   ASC_KEY_ID        identifiant de la clé API App Store Connect (10 caractères)
+#   ASC_ISSUER_ID     identifiant de l’émetteur (Issuer ID, de la forme 1a2b3c4d-…)
+#   ASC_KEY_P8        contenu du fichier AuthKey_XXXXXXXXXX.p8 de cette clé
+# Signature automatique par Xcode (certificat et profils fabriqués avec la clé API), puis envoi
+# direct à TestFlight. Rien n’est gardé : la clé est effacée à la fin de la tâche.
+name: Application iPhone → TestFlight
+on:
+  # Étiquette « testflight-… » posée sur la branche app-ios (main n'est pas touchée : Render la
+  # met en ligne). Le bouton Run workflow ne paraît que si ce fichier est aussi sur main.
+  push:
+    tags: ["testflight-*"]
+  schedule:
+    - cron: "0 5 1 1,3,5,7,9,11 *"   # 1er janvier, mars, mai, juillet, septembre, novembre, 6 h à Paris
+  workflow_dispatch:
+jobs:
+  testflight:
+    runs-on: macos-15
+    timeout-minutes: 60
+    defaults:
+      run:
+        working-directory: ios
+    env:
+      TEAM: ${{ secrets.APPLE_TEAM_ID }}
+      KEY_ID: ${{ secrets.ASC_KEY_ID }}
+      ISSUER: ${{ secrets.ASC_ISSUER_ID }}
+    steps:
+      - name: Secrets présents ?
+        working-directory: .
+        run: |
+          missing=""
+          for v in APPLE_TEAM_ID ASC_KEY_ID ASC_ISSUER_ID ASC_KEY_P8; do
+            [ -n "$(printenv "S_$v")" ] || missing="$missing $v"
+          done
+          if [ -n "$missing" ]; then echo "::error::Secrets manquants :$missing"; exit 1; fi
+        env:
+          S_APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          S_ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          S_ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          S_ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
+      - uses: actions/checkout@v4
+        with:
+          # Envoi programmé ou bouton (depuis main) : la branche de l'application.
+          ref: ${{ github.event_name == 'push' && github.ref || 'app-ios' }}
+      - uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+      - name: Clé API App Store Connect
+        env:
+          KEY_P8: ${{ secrets.ASC_KEY_P8 }}
+        run: |
+          # Espaces ou retours à la ligne collés avec les identifiants : retirés.
+          for v in KEY_ID TEAM ISSUER; do
+            clean=$(printf '%s' "${!v}" | tr -d '[:space:]')
+            printf -v "$v" '%s' "$clean"
+            echo "$v=$clean" >> "$GITHUB_ENV"
+          done
+          mkdir -p "$RUNNER_TEMP/cles"
+          # Clé remise en forme (fins de ligne Windows, lignes collées, en-tête absent) ; seule sa
+          # longueur est affichée, jamais son contenu. Clé d’Apple attendue : 150 octets environ.
+          KEY_FILE="$RUNNER_TEMP/cles/AuthKey_$KEY_ID.p8" python3 - <<'EOF'
+          import base64, os, re, textwrap
+          raw = os.environ["KEY_P8"].replace("\r", "")
+          body = re.sub(r"\s+", "", re.sub(r"-----(BEGIN|END)[A-Z ]*-----", "", raw))
+          try:
+              size = len(base64.b64decode(body, validate=True))
+          except Exception:
+              size = -1
+          print("::notice::Clé .p8 : %d octets une fois décodée (attendu : environ 150)" % size)
+          pem = "-----BEGIN PRIVATE KEY-----\n" + "\n".join(textwrap.wrap(body, 64)) + "\n-----END PRIVATE KEY-----\n"
+          with open(os.environ["KEY_FILE"], "w") as f:
+              f.write(pem)
+          if size < 100:
+              print("::error::Le secret ASC_KEY_P8 ne ressemble pas à une clé .p8 : recolle tout le contenu du fichier")
+              raise SystemExit(1)
+          EOF
+          chmod 600 "$RUNNER_TEMP/cles/AuthKey_$KEY_ID.p8"
+          # Identifiants : formes attendues (sans les afficher).
+          [[ "$KEY_ID" =~ ^[A-Z0-9]{10}$ ]] || echo "::error::ASC_KEY_ID : 10 lettres majuscules ou chiffres attendus"
+          [[ "$TEAM" =~ ^[A-Z0-9]{10}$ ]] || echo "::error::APPLE_TEAM_ID : 10 lettres majuscules ou chiffres attendus"
+          [[ "$ISSUER" =~ ^[0-9a-f-]{36}$ ]] || echo "::error::ASC_ISSUER_ID : identifiant à tirets de 36 caractères attendu"
+      - name: XcodeGen
+        run: |
+          brew install xcodegen
+          xcodegen generate
+      # Chaque envoi fabrique un certificat de développement « Created via API » sur une machine
+      # neuve ; Apple en limite le nombre. On retire donc ceux des envois précédents (eux seuls :
+      # les certificats de distribution et ceux créés à la main ne sont pas touchés).
+      - name: Anciens certificats de passage
+        run: |
+          python3 - <<'PY' || echo "::warning::Ménage des certificats de passage impossible (l'envoi continue)"
+          import base64, json, os, subprocess, time, urllib.request
+          kid, iss = os.environ["KEY_ID"], os.environ["ISSUER"]
+          key = os.path.join(os.environ["RUNNER_TEMP"], "cles", "AuthKey_%s.p8" % kid)
+          b64 = lambda b: base64.urlsafe_b64encode(b).rstrip(b"=")
+          now = int(time.time())
+          msg = b64(json.dumps({"alg": "ES256", "kid": kid, "typ": "JWT"}).encode()) + b"." + \
+              b64(json.dumps({"iss": iss, "iat": now, "exp": now + 600, "aud": "appstoreconnect-v1"}).encode())
+          der = subprocess.run(["openssl", "dgst", "-sha256", "-sign", key], input=msg, capture_output=True, check=True).stdout
+          i, rs = (2 if der[1] < 0x80 else 2 + (der[1] & 0x7F)), []
+          for _ in range(2):          # signature DER → r et s sur 32 octets chacun
+              n = der[i + 1]
+              rs.append(int.from_bytes(der[i + 2:i + 2 + n], "big").to_bytes(32, "big"))
+              i += 2 + n
+          token = (msg + b"." + b64(rs[0] + rs[1])).decode()
+          api = "https://api.appstoreconnect.apple.com/v1/certificates"
+          def call(method, url):
+              req = urllib.request.Request(url, method=method, headers={"Authorization": "Bearer " + token})
+              with urllib.request.urlopen(req, timeout=30) as f:
+                  return f.read()
+          certs = json.loads(call("GET", api + "?filter%5BcertificateType%5D=DEVELOPMENT,IOS_DEVELOPMENT&limit=200"))["data"]
+          gone = 0
+          for c in certs:
+              a = c["attributes"]
+              if "Created via API" in (a.get("name") or "") + (a.get("displayName") or ""):
+                  call("DELETE", api + "/" + c["id"])
+                  gone += 1
+          print("::notice::Certificats de développement de passage retirés : %d sur %d" % (gone, len(certs)))
+          PY
+      - name: Archive signée
+        run: |
+          mkdir -p build
+          ok=0
+          xcodebuild archive \
+            -project Orbismini.xcodeproj -scheme Orbismini -configuration Release \
+            -destination "generic/platform=iOS" -archivePath build/Orbismini.xcarchive \
+            -allowProvisioningUpdates \
+            -authenticationKeyPath "$RUNNER_TEMP/cles/AuthKey_$KEY_ID.p8" \
+            -authenticationKeyID "$KEY_ID" -authenticationKeyIssuerID "$ISSUER" \
+            DEVELOPMENT_TEAM="$TEAM" CURRENT_PROJECT_VERSION="${{ github.run_number }}" > build/archive.log 2>&1 || ok=$?
+          tail -80 build/archive.log
+          # Erreurs en annotations (lisibles sans connexion), comme dans ios.yml.
+          if [ "$ok" -ne 0 ]; then
+            grep -E "(error:|: error |failed \()" build/archive.log | sort -u | head -30 | while IFS= read -r line; do
+              echo "::error::$(printf '%s' "$line" | sed -E 's#^.*/ios/##' | cut -c1-900)"
+            done
+            [ -n "$(grep -E "(error:|: error |failed \()" build/archive.log | head -1)" ] || tail -25 build/archive.log | while IFS= read -r line; do echo "::error::$(printf '%s' "$line" | cut -c1-900)"; done
+          fi
+          exit $ok
+      - name: Envoi à TestFlight
+        run: |
+          cat > build/ExportOptions.plist <<EOF
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0"><dict>
+            <key>method</key><string>app-store-connect</string>
+            <key>destination</key><string>upload</string>
+            <key>teamID</key><string>$TEAM</string>
+            <key>signingStyle</key><string>automatic</string>
+            <key>manageAppVersionAndBuildNumber</key><false/>
+          </dict></plist>
+          EOF
+          xcodebuild -exportArchive \
+            -archivePath build/Orbismini.xcarchive -exportPath build/export \
+            -exportOptionsPlist build/ExportOptions.plist \
+            -allowProvisioningUpdates \
+            -authenticationKeyPath "$RUNNER_TEMP/cles/AuthKey_$KEY_ID.p8" \
+            -authenticationKeyID "$KEY_ID" -authenticationKeyIssuerID "$ISSUER"
+      - name: Effacer la clé
+        if: always()
+        working-directory: .
+        run: rm -rf "$RUNNER_TEMP/cles"
