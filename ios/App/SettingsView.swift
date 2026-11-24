@@ -7,6 +7,8 @@ struct SettingsView: View {
     @State private var widgetKey = Secrets.get(.widgetKey) ?? ""
     @AppStorage(ThemeChoice.key, store: SharedStore.defaults) private var themeRaw = ThemeChoice.saphir.rawValue
     @State private var saved = false
+    @AppStorage(Push.nameKey, store: SharedStore.defaults) private var phoneName = ""
+    @State private var nameSent = false
 
     var body: some View {
         Form {
@@ -20,6 +22,22 @@ struct SettingsView: View {
                 Text("Thème")
             } footer: {
                 Text("Les mêmes que le site et Orbis : Saphir, Onyx (noir) et Perle (clair). Le widget suit aussi.")
+            }
+            Section {
+                TextField("Nom de ce téléphone (ex. Sylvian, Magasin)", text: $phoneName)
+                    .textInputAutocapitalization(.words)
+                    .autocorrectionDisabled()
+                    .submitLabel(.done)
+                    .onSubmit(sendName)
+                    .onChange(of: phoneName) { _, new in
+                        if new.count > 40 { phoneName = String(new.prefix(40)) }
+                        nameSent = false
+                    }
+                if nameSent { Text("Nom envoyé à Orbismini.").font(.footnote).foregroundStyle(Theme.up) }
+            } header: {
+                Text("Ce téléphone")
+            } footer: {
+                Text("Ce nom s’affiche dans Orbis, où l’on choisit quels téléphones reçoivent les demandes de virement et les transferts. Il faut que les notifications soient acceptées (cloche).")
             }
             Section("Connexion") {
                 LabeledContent("Serveur", value: Config.host)
@@ -68,6 +86,15 @@ struct SettingsView: View {
         .navigationTitle("Réglages")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Fermer") { dismiss() } } }
+        .onDisappear { if !nameSent { sendName() } }
+    }
+
+    private func sendName() {
+        phoneName = phoneName.trimmingCharacters(in: .whitespacesAndNewlines)
+        Task {
+            await Push.uploadKnownToken()
+            nameSent = SharedStore.defaults.string(forKey: Push.errorKey) == nil && Push.serverSends
+        }
     }
 
     private var version: String {

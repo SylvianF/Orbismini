@@ -108,10 +108,14 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
         completionHandler([.banner, .list, .sound])
     }
 
-    // Notification touchée : écran de l’alerte.
+    // Notification touchée : alerte de cours → son écran ; événement d’Orbis (virement, transfert)
+    // → l’application s’ouvre simplement (la demande se traite dans Orbis).
     func userNotificationCenter(_ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse,
                                 withCompletionHandler completionHandler: @escaping () -> Void) {
-        Task { @MainActor in AppModel.shared.open(URL(string: "orbismini://alerte")!) }
+        let screen = response.notification.request.content.userInfo["ecran"] as? String ?? "alerte"
+        if screen == "alerte" {
+            Task { @MainActor in AppModel.shared.open(URL(string: "orbismini://alerte")!) }
+        }
         completionHandler()
     }
 }
@@ -122,6 +126,8 @@ enum Push {
     static let tokenKey = "apnsJeton"
     static let serverKey = "apnsServeur"      // le serveur envoie-t-il les notifications de l’application ?
     static let errorKey = "apnsErreur"
+    /// Nom de ce téléphone (« Sylvian », « Magasin »…), montré dans Orbis pour choisir qui reçoit quoi.
+    static let nameKey = "nomTelephone"
 
     static func status() async -> UNAuthorizationStatus {
         await UNUserNotificationCenter.current().notificationSettings().authorizationStatus
@@ -149,12 +155,14 @@ enum Push {
     static func uploadKnownToken() async {
         guard Session.isOpen, let token = SharedStore.defaults.string(forKey: tokenKey) else { return }
         let client = APIClient.app
-        let body = try? JSONSerialization.data(withJSONObject: ["token": token, "env": Config.apnsEnvironment])
+        let name = SharedStore.defaults.string(forKey: nameKey) ?? ""
+        let body = try? JSONSerialization.data(withJSONObject: ["token": token, "env": Config.apnsEnvironment, "nom": name])
         let req = client.request("/api/apns", method: "POST", json: body, headers: ["X-Appareil": Secrets.deviceID])
         struct Answer: Decodable { let enabled: Bool? }
         do {
             let answer = try await client.json(Answer.self, req)
             SharedStore.defaults.set(answer.enabled ?? false, forKey: serverKey)
+            SharedStore.defaults.removeObject(forKey: errorKey)
         } catch APIError.server(404, _) {
             SharedStore.defaults.set(false, forKey: serverKey)   // serveur sans /api/apns (avant la mise à jour)
         } catch {

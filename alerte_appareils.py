@@ -13,8 +13,14 @@ Où : fichier alertes.json de la branche « alertes » du dépôt d’Orbismini 
 Render ne redémarre pas quand il change). Le dépôt peut être lu par d’autres : il n’y a que
 l’empreinte de l’identifiant de chaque téléphone (jamais l’identifiant), ses seuils et ses
 dernières alertes. Le canal ntfy n’y est pas : il est calculé à partir de l’empreinte et d’une clé
-tirée du mot de passe d’Orbismini (réglages de Render), donc introuvable depuis le dépôt."""
+tirée du mot de passe d’Orbismini (réglages de Render), donc introuvable depuis le dépôt.
 
+Événements d’Orbis (demandes de virement, transferts entre agences) : Orbis choisit quels
+téléphones les reçoivent (cases cochées dans Orbis, « events » ici) et les annonce au serveur, qui
+les envoie à l’application iPhone de ces téléphones. Le nom donné au téléphone dans l’application
+est rangé chiffré (clé tirée du mot de passe d’Orbismini) : le dépôt ne montre aucun nom."""
+
+import base64
 import hashlib
 import hmac
 import json
@@ -32,6 +38,9 @@ FILE = "alertes.json"
 MAX_DEVICES = 200
 FORGET_DAYS = 90       # téléphone sans alerte en place ni visite depuis 90 jours : oublié
 SECRET = re.compile(r"[0-9a-f]{32}")
+EVENTS = ("virement", "transfert")   # événements d’Orbis qu’un téléphone peut recevoir
+SHORT = re.compile(r"[0-9a-f]{16}")  # identifiant d’un téléphone donné à Orbis (début de l’empreinte)
+NAME_MAX = 40
 
 
 def device_id(secret):
@@ -50,6 +59,51 @@ def _channel_key():
 def channel(did):
     """Canal ntfy du téléphone : introuvable sans le mot de passe d’Orbismini."""
     return "orbismini-" + hmac.new(_channel_key(), did.encode(), hashlib.sha256).hexdigest()[:20]
+
+
+def _name_key():
+    password = os.environ.get("GOLDAPP_PASSWORD", "")
+    return hashlib.sha256(("orbismini-nom:" + password).encode()).digest()
+
+
+def _short_text(value, limit):
+    return " ".join("".join(c for c in str(value or "") if c.isprintable()).split())[:limit]
+
+
+def clean_name(name):
+    """Nom donné au téléphone dans l’application (« Sylvian », « Magasin »…), 40 caractères au plus."""
+    return _short_text(name, NAME_MAX)
+
+
+def _stream(key, nonce, size):
+    out, n = b"", 0
+    while len(out) < size:
+        out += hmac.new(key, nonce + n.to_bytes(4, "big"), hashlib.sha256).digest()
+        n += 1
+    return out[:size]
+
+
+def seal_name(name):
+    """Nom chiffré pour le dépôt (lisible seulement avec le mot de passe d’Orbismini)."""
+    key, nonce, raw = _name_key(), os.urandom(12), name.encode("utf-8")
+    sealed = bytes(a ^ b for a, b in zip(raw, _stream(key, nonce, len(raw))))
+    tag = hmac.new(key, b"nom" + nonce + sealed, hashlib.sha256).digest()[:16]
+    return base64.urlsafe_b64encode(nonce + sealed + tag).decode()
+
+
+def open_name(blob):
+    """Nom en clair ; « » s’il est absent ou illisible (mot de passe changé…)."""
+    try:
+        raw = base64.urlsafe_b64decode(str(blob or "").encode())
+        if len(raw) < 28:
+            return ""
+        nonce, sealed, tag = raw[:12], raw[12:-16], raw[-16:]
+        key = _name_key()
+        if not hmac.compare_digest(tag, hmac.new(key, b"nom" + nonce + sealed, hashlib.sha256).digest()[:16]):
+            return ""
+        return bytes(a ^ b for a, b in zip(sealed, _stream(key, nonce, len(sealed)))).decode("utf-8")
+    except (ValueError, UnicodeDecodeError):
+        return ""
 
 
 def _today():
@@ -182,12 +236,14 @@ class Store:
     # ---------------------------------------------------------------- application iPhone (apns.py)
     MAX_APNS = 3
 
-    def set_apns(self, did, token, env):
-        """Jeton de notification de l’application iPhone pour ce téléphone (vide : retiré).
+    def set_apns(self, did, token, env, name=None):
+        """Jeton de notification de l’application iPhone pour ce téléphone (vide : retiré), et le
+        nom donné au téléphone dans l’application (None : inchangé, « » : retiré).
         Un jeton seul ne sert à rien sans la clé d’Apple, rangée dans les réglages de Render."""
         import apns
 
         entry = None if not token else dict(zip(("token", "env"), apns.clean_token(token, env)))
+        name = None if name is None else clean_name(name)
         with self.lock:
             self._load()
             data = self._copy()
@@ -206,6 +262,11 @@ class Store:
             d["apns"] = ((kept + [entry]) if entry else [])[-self.MAX_APNS:]
             if not d["apns"]:
                 d.pop("apns")
+            if name is not None and name != open_name(d.get("nom")):
+                if name:
+                    d["nom"] = seal_name(name)
+                else:
+                    d.pop("nom", None)
             d["seen"] = _today()
             if data != self.data:
                 self._save(data, "Notifications de l’application iPhone d’un téléphone")
@@ -235,6 +296,63 @@ class Store:
                         d.pop("apns")
             if data != self.data:
                 self._save(data, "Notifications de l’application iPhone : jeton périmé retiré")
+
+    # ---------------------------------------------------------------- événements d’Orbis
+    def phones(self):
+        """Téléphones qui ont l’application iPhone (écran d’Orbis qui choisit qui reçoit quoi)."""
+        with self.lock:
+            self._load()
+            out = [dict(id=did[:16], nom=open_name(d.get("nom")), vu=d.get("seen", ""),
+                        evenements=[e for e in EVENTS if e in (d.get("events") or [])])
+                   for did, d in self.data["devices"].items() if d.get("apns")]
+        return sorted(out, key=lambda x: (x["nom"] == "", x["nom"].lower(), x["id"]))
+
+    def set_events(self, short, events):
+        """Événements d’Orbis que reçoit ce téléphone (cases cochées dans Orbis)."""
+        short = str(short or "").strip().lower()
+        if not SHORT.fullmatch(short):
+            raise ValueError("Téléphone inconnu.")
+        if not isinstance(events, list) or any(e not in EVENTS for e in events):
+            raise ValueError("Événements possibles : " + ", ".join(EVENTS) + ".")
+        with self.lock:
+            self._load()
+            found = [did for did in self.data["devices"] if did.startswith(short)]
+            if len(found) != 1:
+                raise ValueError("Téléphone inconnu.")
+            data = self._copy()
+            d = data["devices"][found[0]]
+            chosen = [e for e in EVENTS if e in events]
+            if chosen:
+                d["events"] = chosen
+            else:
+                d.pop("events", None)
+            if data != self.data:
+                self._save(data, "Événements d’Orbis choisis pour un téléphone")
+        return self.phones()
+
+    def event(self, kind, eid, title, body, post=None):
+        """Événement annoncé par Orbis → application iPhone des téléphones qui l’ont choisi.
+        Renvoie le nombre de téléphones atteints ; une même annonce (kind, eid) ne part qu’une fois."""
+        import apns
+
+        if kind not in EVENTS:
+            raise ValueError("Événement inconnu : " + ", ".join(EVENTS) + " seulement.")
+        eid, title, body = _short_text(eid, 80), _short_text(title, 100), _short_text(body, 300)
+        if not eid or not title:
+            raise ValueError("Identifiant et titre de l’événement nécessaires.")
+        mark = "orbis:" + kind + ":" + eid
+        with self.lock:
+            if mark in self.sent:
+                return 0
+            self._load()
+            chosen = [did for did, d in self.data["devices"].items() if kind in (d.get("events") or [])]
+            tokens = [x for did in chosen for x in self.apns_tokens(did)]
+            if not apns.enabled() or not tokens:
+                return 0
+            self.sent.add(mark)
+        gone = apns.send(tokens, title, body, post, screen="orbis")
+        self.forget_apns(gone)
+        return len([did for did in chosen if self.apns_tokens(did)])
 
     def push(self, tokens, h, post=None):
         """Alerte vers l’application iPhone, seulement si apns.py est allumé ; jamais d’erreur.

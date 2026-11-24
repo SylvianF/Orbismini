@@ -504,6 +504,44 @@ class Handler(SimpleHTTPRequestHandler):
         given = self.headers.get("X-Alert-Key", "")
         return bool(ALERT_KEY) and hmac.compare_digest(given.encode(), ALERT_KEY.encode())
 
+    def orbis_events(self, method):
+        """Événements d’Orbis (demandes de virement, transferts) : téléphones qui ont l’application,
+        cases cochées dans Orbis, annonces. Clé d’Orbis seule (X-Alert-Key) ; vrai si traité ici."""
+        path = urlparse(self.path).path
+        if path not in ("/api/orbis/telephones", "/api/orbis/evenement"):
+            return False
+        if not self.alert_allowed():
+            time.sleep(1)
+            self.send_json({"error": "Clé d’Orbis absente ou incorrecte."}, 403)
+            return True
+        import alerte_appareils as AA
+        import apns
+
+        try:
+            body = {}
+            if method == "POST":
+                length = min(int(self.headers.get("Content-Length") or 0), 8192)
+                body = json.loads(self.rfile.read(length) or b"{}")
+                if not isinstance(body, dict):
+                    raise ValueError("Objet JSON attendu.")
+            if path == "/api/orbis/telephones":
+                if method == "POST":
+                    phones = AA.STORE.set_events(body.get("id"), body.get("evenements"))
+                else:
+                    phones = AA.STORE.phones()
+                self.send_json({"telephones": phones, "notifications": apns.enabled(),
+                                "evenements": list(AA.EVENTS)})
+            elif method == "POST":
+                n = AA.STORE.event(body.get("type"), body.get("id"), body.get("titre"), body.get("texte"))
+                self.send_json({"envoye": n, "notifications": apns.enabled()})
+            else:
+                self.send_json({"error": "POST attendu."}, 405)
+        except (ValueError, TypeError) as error:
+            self.send_json({"error": str(error)[:200]}, 400)
+        except PermissionError as error:
+            self.send_json({"error": str(error)[:200]}, 503)
+        return True
+
     def phone_alert(self, body=None):
         """Alerte du téléphone (session + identifiant X-Appareil) : la sienne, ou celle d’Orbis
         s’il y est relié. None : demande d’Orbis ou d’une ancienne page (alerte commune)."""
@@ -748,7 +786,7 @@ class Handler(SimpleHTTPRequestHandler):
         return True
 
     def do_POST(self):
-        if self.tickets("POST") or self.orbiscan("POST"):
+        if self.orbis_events("POST") or self.tickets("POST") or self.orbiscan("POST"):
             return
         if urlparse(self.path).path == "/api/scan/identify":
             # Scanner de pièces : photos (JPEG en base64) → pièces possibles (pieces_scan.py).
@@ -782,7 +820,7 @@ class Handler(SimpleHTTPRequestHandler):
             try:
                 length = min(int(self.headers.get("Content-Length") or 0), 4096)
                 body = json.loads(self.rfile.read(length) or b"{}")
-                AA.STORE.set_apns(did, body.get("token"), body.get("env"))
+                AA.STORE.set_apns(did, body.get("token"), body.get("env"), body.get("nom"))
                 return self.send_json({"enabled": True})
             except (ValueError, TypeError, AttributeError) as error:
                 return self.send_json({"error": str(error)[:200]}, 400)
@@ -851,7 +889,7 @@ class Handler(SimpleHTTPRequestHandler):
         return super().do_HEAD()
 
     def do_GET(self):
-        if self.tickets("GET") or self.orbiscan("GET"):
+        if self.orbis_events("GET") or self.tickets("GET") or self.orbiscan("GET"):
             return
         url = urlparse(self.path)
         if url.path == "/logout":
