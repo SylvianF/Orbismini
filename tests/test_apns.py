@@ -180,6 +180,118 @@ class RouteTests(Base):
         self.assertEqual(s.apns_tokens(AA.device_id(PHONE1)), [(TOKEN1, "sandbox")])
 
 
+class OrbisEventTests(Base):
+    """Demandes de virement et transferts annoncés par Orbis : seuls les téléphones cochés reçoivent."""
+
+    def phones(self):
+        s, d1, d2 = AA.Store(token="jeton-github"), AA.device_id(PHONE1), AA.device_id(PHONE2)
+        s.set_apns(d1, TOKEN1, "production", "Sylvian")
+        s.set_apns(d2, TOKEN2, "production", "Magasin")
+        return s, d1, d2
+
+    def test_name_sealed_in_public_file_and_listed_for_orbis(self):
+        with patch.dict(os.environ, GOLDAPP_PASSWORD="secret"):
+            s, d1, d2 = self.phones()
+            self.assertNotIn("Sylvian", self.gh.file)
+            self.assertNotIn("Magasin", self.gh.file)
+            listed = s.phones()
+            self.assertEqual([x["nom"] for x in listed], ["Magasin", "Sylvian"])
+            self.assertEqual({x["id"] for x in listed}, {d1[:16], d2[:16]})
+            self.assertTrue(all(x["evenements"] == [] for x in listed))
+            s.set_apns(d1, TOKEN1, "production")          # sans nom : inchangé
+            self.assertIn("Sylvian", [x["nom"] for x in s.phones()])
+            s.set_apns(d1, TOKEN1, "production", "")      # vide : retiré
+            self.assertIn("", [x["nom"] for x in s.phones()])
+        with patch.dict(os.environ, GOLDAPP_PASSWORD="autre"):
+            self.assertEqual(AA.open_name(AA.seal_name("Rachel")), "Rachel")
+            self.assertNotIn("Magasin", [x["nom"] for x in s.phones()])   # autre mot de passe : illisible
+
+    def test_only_checked_phones_receive_and_once(self):
+        s, d1, d2 = self.phones()
+        s.set_events(d1[:16], ["virement", "transfert"])
+        s.set_events(d2[:16], ["transfert"])
+        with patch.dict(os.environ, ON), patch.object(apns, "jwt", lambda: "jeton"):
+            post = self.apple_post()
+            self.assertEqual(s.event("virement", "v-12", "Nouvelle demande de virement", "Rachel, Nancy", post), 1)
+            self.assertEqual(s.event("virement", "v-12", "Nouvelle demande de virement", "Rachel, Nancy", post), 0)
+            self.assertEqual(s.event("transfert", "t-3", "Nouveau transfert", "Metz → Nancy", post), 2)
+        urls = [u for u, _, _ in self.apple]
+        self.assertEqual(urls[0], "https://api.push.apple.com/3/device/" + TOKEN1)
+        self.assertEqual(sorted(urls[1:]), sorted("https://api.push.apple.com/3/device/" + t for t in (TOKEN1, TOKEN2)))
+        self.assertEqual(self.apple[0][2]["aps"]["alert"], {"title": "Nouvelle demande de virement", "body": "Rachel, Nancy"})
+        self.assertEqual(self.apple[0][2]["ecran"], "orbis")
+        self.assertEqual(self.ntfy, [])
+
+    def test_unchecking_and_bad_requests(self):
+        s, d1, _ = self.phones()
+        s.set_events(d1[:16], ["virement"])
+        s.set_events(d1[:16], [])
+        self.assertEqual([x["evenements"] for x in s.phones()], [[], []])
+        for short, events in ((d1[:16], ["paie"]), ("0" * 16, ["virement"]), ("pas-un-id", []), (d1[:16], "virement")):
+            with self.assertRaises(ValueError):
+                s.set_events(short, events)
+        with self.assertRaises(ValueError):
+            s.event("paie", "x", "Titre", "")
+        with self.assertRaises(ValueError):
+            s.event("virement", "", "Titre", "")
+
+    def test_switched_off_sends_nothing(self):
+        s, d1, _ = self.phones()
+        s.set_events(d1[:16], ["virement"])
+        self.assertEqual(s.event("virement", "v-1", "Demande", "", self.apple_post()), 0)
+        self.assertEqual(self.apple, [])
+        with patch.dict(os.environ, ON), patch.object(apns, "jwt", lambda: "jeton"):
+            self.assertEqual(s.event("virement", "v-1", "Demande", "", self.apple_post()), 1)   # pas « déjà envoyée »
+
+
+class OrbisRouteTests(Base):
+    def call(self, method, path, body=None, allowed=True):
+        import server
+
+        h = server.Handler.__new__(server.Handler)
+        raw = json.dumps(body or {}).encode()
+        h.path = path
+        h.headers = {"Content-Length": str(len(raw))}
+        h.rfile = io.BytesIO(raw)
+        out = []
+        h.send_json = lambda data, status=200: out.append((status, data))
+        h.alert_allowed = lambda: allowed
+        self.assertTrue(h.orbis_events(method))
+        return out[0]
+
+    def test_needs_orbis_key(self):
+        with patch("time.sleep"):
+            self.assertEqual(self.call("GET", "/api/orbis/telephones", allowed=False)[0], 403)
+            self.assertEqual(self.call("POST", "/api/orbis/evenement", {"type": "virement"}, allowed=False)[0], 403)
+
+    def test_list_check_and_announce(self):
+        s = AA.Store(token="jeton-github")
+        d1 = AA.device_id(PHONE1)
+        s.set_apns(d1, TOKEN1, "production", "Sylvian")
+        with patch.object(AA, "STORE", s), patch.dict(os.environ, ON), patch.object(apns, "jwt", lambda: "jeton"), \
+                patch.object(apns, "_post", self.apple_post()):
+            status, data = self.call("GET", "/api/orbis/telephones")
+            self.assertEqual(status, 200)
+            self.assertEqual(data["evenements"], ["virement", "transfert"])
+            self.assertTrue(data["notifications"])
+            self.assertEqual([(x["id"], x["evenements"]) for x in data["telephones"]], [(d1[:16], [])])
+            status, data = self.call("POST", "/api/orbis/telephones", {"id": d1[:16], "evenements": ["virement"]})
+            self.assertEqual((status, data["telephones"][0]["evenements"]), (200, ["virement"]))
+            self.assertEqual(self.call("POST", "/api/orbis/evenement",
+                                       {"type": "virement", "id": "v-7", "titre": "Nouvelle demande de virement",
+                                        "texte": "Rachel, Nancy"}), (200, {"envoye": 1, "notifications": True}))
+            self.assertEqual(self.call("POST", "/api/orbis/evenement", {"type": "?", "id": "1", "titre": "x"})[0], 400)
+            self.assertEqual(self.call("GET", "/api/orbis/evenement")[0], 405)
+        self.assertEqual(len(self.apple), 1)
+
+    def test_other_paths_untouched(self):
+        import server
+
+        h = server.Handler.__new__(server.Handler)
+        h.path = "/api/orbiscan/peers"
+        self.assertFalse(h.orbis_events("GET"))
+
+
 @unittest.skipUnless(HAS_CRYPTO, "cryptography absent (requirements.txt)")
 class JwtTests(Base):
     def test_es256_token_verifies(self):

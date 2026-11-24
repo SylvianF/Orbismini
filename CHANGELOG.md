@@ -1,5 +1,14 @@
 # Historique
 
+## 25/11/2026 — Demandes de virement et transferts d'Orbis vers l'application iPhone
+
+- `GET /api/orbis/telephones` : téléphones qui ont l'application iPhone, avec le nom qu'on leur a
+  donné et les événements qu'ils reçoivent ; `POST` du même chemin : cases cochées dans Orbis.
+- `POST /api/orbis/evenement` (`type` : virement ou transfert, `id`, `titre`, `texte`) : Orbis
+  annonce une nouvelle demande, envoyée aux seuls téléphones cochés, une fois par annonce.
+- Clé d'Orbis seule (`X-Alert-Key`, la même que pour l'alerte commune) ; refus sinon.
+- Le nom du téléphone est rangé chiffré dans le dépôt public. Site inchangé.
+
 ## 24/11/2026 — Notifications de l'application iPhone (éteintes tant que Render n'a pas la clé)
 
 - `apns.py` : envoi des alertes de cours par les notifications d'Apple, à côté de ntfy (qui reste).
