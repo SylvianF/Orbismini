@@ -1,5 +1,13 @@
 # Historique
 
+## 24/11/2026 — Notifications de l'application iPhone (éteintes tant que Render n'a pas la clé)
+
+- `apns.py` : envoi des alertes de cours par les notifications d'Apple, à côté de ntfy (qui reste).
+  Éteint tant que `ORBISMINI_APNS` ne vaut pas 1 et que la clé d'Apple manque sur Render.
+- `POST /api/apns` : l'application iPhone y dépose l'adresse de notification du téléphone.
+- `requirements.txt` (httpx, cryptography) et commande de construction de Render qui les installe ;
+  sans elles, le site et ntfy marchent comme avant. Tests : `tests/test_apns.py`.
+
 ## 24/11/2026 — Application iPhone : envoi automatique à TestFlight tous les deux mois
 
 - `.github/workflows/ios-testflight.yml` copié sur main : le 1er des mois impairs, l'application

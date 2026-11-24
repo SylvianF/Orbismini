@@ -1,0 +1,4 @@
+# Notifications de l’application iPhone (apns.py), seulement si ORBISMINI_APNS=1 sur Render.
+# Sans elles, le site et ntfy marchent comme avant (rien n’est chargé).
+httpx[http2]==0.27.2
+cryptography==43.0.3

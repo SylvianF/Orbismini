@@ -29,6 +29,8 @@ _lock = threading.Lock()
 _state = None
 _sent = set()
 _checked = [0.0]
+# Appelés pour chaque alerte commune envoyée à ntfy (server.py : notifications de l’application iPhone).
+LISTENERS = []
 
 
 def key_from_password(password):
@@ -198,14 +200,25 @@ def notify(s, key, post=None):
             out.append(h["id"])
         except Exception:
             _sent.discard(h["id"])  # réessayé au prochain contrôle
+            continue
+        for listener in LISTENERS:  # application iPhone (apns.py), sans effet sur ntfy
+            try:
+                listener(h)
+            except Exception:
+                pass
     return out
+
+
+def message(h):
+    """Titre et texte d’une alerte (ntfy et application iPhone)."""
+    body = ("Cours " + kilo(h["price"]) + (", contre " + kilo(h["ref"]) + " 24 h plus tôt" if h.get("ref") else "")
+            + " (BullionVault). Ouvrir Orbismini pour régler une nouvelle alerte.")
+    return what(h), body
 
 
 def send(topic, h, post=None):
     """Une alerte vers un canal ntfy."""
-    body = ("Cours " + kilo(h["price"]) + (", contre " + kilo(h["ref"]) + " 24 h plus tôt" if h.get("ref") else "")
-            + " (BullionVault). Ouvrir Orbismini pour régler une nouvelle alerte.")
-    (post or _post)(topic, what(h), body)
+    (post or _post)(topic, *message(h))
 
 
 def _post(topic, title, body):

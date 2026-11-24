@@ -3,7 +3,8 @@ services:
     name: mon-cours-or
     runtime: python
     plan: free
-    buildCommand: "echo Ready"
+    # Dépendances des notifications de l’application iPhone (apns.py) ; sans elles, tout le reste marche.
+    buildCommand: "pip install -r requirements.txt || echo Ready"
     startCommand: "python server.py"
     # Fichier lisible sans mot de passe : Render vérifie ainsi que le service répond.
     healthCheckPath: /icon.svg
@@ -24,4 +25,17 @@ services:
       - key: ORBISCAN_GITHUB_TOKEN
         sync: false
       - key: ORBISCAN_ADMIN
+        sync: false
+      # Notifications de l’application iPhone (apns.py) : éteintes tant que ORBISMINI_APNS ne vaut pas 1.
+      # APNS_KEY : contenu du fichier .p8 d’Apple ; APNS_KEY_ID, APNS_TEAM_ID : 10 caractères chacun ;
+      # APNS_TOPIC : identifiant de l’application (fr.cndo.orbismini).
+      - key: ORBISMINI_APNS
+        sync: false
+      - key: APNS_KEY
+        sync: false
+      - key: APNS_KEY_ID
+        sync: false
+      - key: APNS_TEAM_ID
+        sync: false
+      - key: APNS_TOPIC
         sync: false

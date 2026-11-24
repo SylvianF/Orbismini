@@ -431,6 +431,17 @@ def alert_view(with_price):
     return out
 
 
+def apns_orbis(h):
+    """Alerte commune avec Orbis : aussi vers l’application iPhone des téléphones reliés (apns.py,
+    éteint par défaut ; ntfy n’en dépend pas)."""
+    import alerte_appareils as AA
+
+    AA.STORE.push(AA.STORE.orbis_apns, h)
+
+
+__import__("alerte").LISTENERS.append(apns_orbis)
+
+
 def public(route):
     """Vrai pour un fichier de l’application ; faux pour le code serveur et les notes."""
     path = PurePosixPath(unquote(route))
@@ -756,6 +767,27 @@ class Handler(SimpleHTTPRequestHandler):
                 return self.send_json(pieces_scan.identify(pieces_scan.FOLDER, photos))
             except (ValueError, TypeError) as error:
                 return self.send_json({"error": str(error)[:300]}, 400)
+        if urlparse(self.path).path == "/api/apns":
+            # Application iPhone : jeton de notification de ce téléphone (apns.py, éteint par défaut).
+            if not self.guard("/api/apns"):
+                return
+            import apns
+            import alerte_appareils as AA
+
+            if not apns.enabled():
+                return self.send_json({"enabled": False})
+            did = AA.device_id(self.headers.get("X-Appareil"))
+            if not did:
+                return self.send_json({"error": "Téléphone non reconnu."}, 400)
+            try:
+                length = min(int(self.headers.get("Content-Length") or 0), 4096)
+                body = json.loads(self.rfile.read(length) or b"{}")
+                AA.STORE.set_apns(did, body.get("token"), body.get("env"))
+                return self.send_json({"enabled": True})
+            except (ValueError, TypeError, AttributeError) as error:
+                return self.send_json({"error": str(error)[:200]}, 400)
+            except PermissionError as error:
+                return self.send_json({"error": str(error)[:200]}, 503)
         if urlparse(self.path).path == "/api/alert":
             # Réglage des seuils (iPhone ou Orbis) : état fusionné, le plus récent l’emporte.
             if not self.guard("/api/alert"):
