@@ -1,7 +1,13 @@
 {
  "devices": {
   "3369de528712d30fd041874cd365a9a47486470587f7b319c15c59bf8469f34c": {
-   "seen": "2026-11-23",
+   "apns": [
+    {
+     "env": "production",
+     "token": "3e67c9bcea9a491169c995065a7f3b186e200e818a30b1f826a659516782bb12"
+    }
+   ],
+   "seen": "2026-11-24",
    "state": {
     "above": 108500.0,
     "hits": [
