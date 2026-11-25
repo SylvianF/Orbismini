@@ -14,7 +14,8 @@
    "nom": "cO6TnRqZGw_SnltEBurkmM6XlVxQUAup3ka_whoV57TTTjnee0Jpr9o=",
    "seen": "2026-11-25",
    "state": {
-    "below": 104000.0,
+    "above": 110000.0,
+    "below": 100000.0,
     "hits": [
      {
       "at": "2026-11-23T15:47:07+00:00",
@@ -50,7 +51,7 @@
      }
     ],
     "move": 2.0,
-    "updated": "2026-11-24T21:18:40.957Z"
+    "updated": "2026-11-25T12:26:06.899Z"
    }
   },
   "af360cbee349ccd9469bdac1990232642fad530fcc62d9071fa1cccdcca9c62b": {
