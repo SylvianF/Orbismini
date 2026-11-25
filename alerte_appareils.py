@@ -15,9 +15,10 @@ l’empreinte de l’identifiant de chaque téléphone (jamais l’identifiant),
 dernières alertes. Le canal ntfy n’y est pas : il est calculé à partir de l’empreinte et d’une clé
 tirée du mot de passe d’Orbismini (réglages de Render), donc introuvable depuis le dépôt.
 
-Événements d’Orbis (demandes de virement, transferts entre agences) : Orbis choisit quels
-téléphones les reçoivent (cases cochées dans Orbis, « events » ici) et les annonce au serveur, qui
-les envoie à l’application iPhone de ces téléphones. Le nom donné au téléphone dans l’application
+Événements d’Orbis (demandes de virement, transferts entre agences, achats et ventes par ville) :
+Orbis choisit quels téléphones les reçoivent (cases cochées dans Orbis, « events » ici : « virement »,
+« transfert », « achat:Nancy », « vente:Calais »…) et les annonce au serveur, qui les envoie à
+l’application iPhone de ces téléphones. Le nom donné au téléphone dans l’application
 est rangé chiffré (clé tirée du mot de passe d’Orbismini) : le dépôt ne montre aucun nom."""
 
 import base64
@@ -38,7 +39,9 @@ FILE = "alertes.json"
 MAX_DEVICES = 200
 FORGET_DAYS = 90       # téléphone sans alerte en place ni visite depuis 90 jours : oublié
 SECRET = re.compile(r"[0-9a-f]{32}")
-EVENTS = ("virement", "transfert")   # événements d’Orbis qu’un téléphone peut recevoir
+EVENTS = ("virement", "transfert", "achat", "vente")   # événements d’Orbis qu’un téléphone peut recevoir
+CITY_EVENTS = ("achat", "vente")     # choisis ville par ville : « achat:Nancy »
+CITY = re.compile(r"[^\W\d_][^\W\d_' -]{0,28}[^\W\d_]|[^\W\d_]{1,2}")
 SHORT = re.compile(r"[0-9a-f]{16}")  # identifiant d’un téléphone donné à Orbis (début de l’empreinte)
 NAME_MAX = 40
 
@@ -104,6 +107,30 @@ def open_name(blob):
         return bytes(a ^ b for a, b in zip(sealed, _stream(key, nonce, len(sealed)))).decode("utf-8")
     except (ValueError, UnicodeDecodeError):
         return ""
+
+
+def _city(value):
+    """Ville d’un achat ou d’une vente (« Nancy », « Saint-Dizier »…) ; ValueError sinon."""
+    city = _short_text(value, 30)
+    if not CITY.fullmatch(city):
+        raise ValueError("Ville invalide : " + city[:30])
+    return city
+
+
+def clean_event(value):
+    """« virement », « transfert », « achat:Nancy », « vente:Calais » ; ValueError sinon."""
+    text = str(value or "").strip()
+    kind, _, city = text.partition(":")
+    if kind in CITY_EVENTS and city:
+        return kind + ":" + _city(city)
+    if kind in EVENTS and kind not in CITY_EVENTS and not city:
+        return kind
+    raise ValueError("Événement inconnu : " + text[:40] + " (virement, transfert, achat:Ville, vente:Ville).")
+
+
+def _event_order(e):
+    kind, _, city = e.partition(":")
+    return EVENTS.index(kind), city.lower()
 
 
 def _today():
@@ -303,7 +330,7 @@ class Store:
         with self.lock:
             self._load()
             out = [dict(id=did[:16], nom=open_name(d.get("nom")), vu=d.get("seen", ""),
-                        evenements=[e for e in EVENTS if e in (d.get("events") or [])])
+                        evenements=list(d.get("events") or []))
                    for did, d in self.data["devices"].items() if d.get("apns")]
         return sorted(out, key=lambda x: (x["nom"] == "", x["nom"].lower(), x["id"]))
 
@@ -312,8 +339,13 @@ class Store:
         short = str(short or "").strip().lower()
         if not SHORT.fullmatch(short):
             raise ValueError("Téléphone inconnu.")
-        if not isinstance(events, list) or any(e not in EVENTS for e in events):
-            raise ValueError("Événements possibles : " + ", ".join(EVENTS) + ".")
+        if not isinstance(events, list):
+            raise ValueError("Liste d’événements attendue.")
+        unique = {}
+        for e in events:
+            e = clean_event(e)
+            unique.setdefault(e.lower(), e)          # même ville écrite autrement : la première gardée
+        chosen = sorted(unique.values(), key=_event_order)
         with self.lock:
             self._load()
             found = [did for did in self.data["devices"] if did.startswith(short)]
@@ -321,7 +353,6 @@ class Store:
                 raise ValueError("Téléphone inconnu.")
             data = self._copy()
             d = data["devices"][found[0]]
-            chosen = [e for e in EVENTS if e in events]
             if chosen:
                 d["events"] = chosen
             else:
@@ -330,13 +361,16 @@ class Store:
                 self._save(data, "Événements d’Orbis choisis pour un téléphone")
         return self.phones()
 
-    def event(self, kind, eid, title, body, post=None):
+    def event(self, kind, eid, title, body, post=None, city=None):
         """Événement annoncé par Orbis → application iPhone des téléphones qui l’ont choisi.
-        Renvoie le nombre de téléphones atteints ; une même annonce (kind, eid) ne part qu’une fois."""
+        Achat et vente : ville obligatoire, seuls les téléphones cochés pour cette ville reçoivent,
+        et la notification ouvre l’onglet Chiffres. Renvoie le nombre de téléphones atteints ; une
+        même annonce (kind, eid) ne part qu’une fois."""
         import apns
 
         if kind not in EVENTS:
             raise ValueError("Événement inconnu : " + ", ".join(EVENTS) + " seulement.")
+        wanted = (kind + ":" + _city(city)).lower() if kind in CITY_EVENTS else kind
         eid, title, body = _short_text(eid, 80), _short_text(title, 100), _short_text(body, 300)
         if not eid or not title:
             raise ValueError("Identifiant et titre de l’événement nécessaires.")
@@ -345,12 +379,13 @@ class Store:
             if mark in self.sent:
                 return 0
             self._load()
-            chosen = [did for did, d in self.data["devices"].items() if kind in (d.get("events") or [])]
+            chosen = [did for did, d in self.data["devices"].items()
+                      if wanted in [e.lower() for e in d.get("events") or []]]
             tokens = [x for did in chosen for x in self.apns_tokens(did)]
             if not apns.enabled() or not tokens:
                 return 0
             self.sent.add(mark)
-        gone = apns.send(tokens, title, body, post, screen="orbis")
+        gone = apns.send(tokens, title, body, post, screen="chiffres" if kind in CITY_EVENTS else "orbis")
         self.forget_apns(gone)
         return len([did for did in chosen if self.apns_tokens(did)])
 

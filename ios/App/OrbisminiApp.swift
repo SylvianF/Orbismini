@@ -108,13 +108,13 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
         completionHandler([.banner, .list, .sound])
     }
 
-    // Notification touchée : alerte de cours → son écran ; événement d’Orbis (virement, transfert)
-    // → l’application s’ouvre simplement (la demande se traite dans Orbis).
+    // Notification touchée : alerte de cours → son écran ; achat ou vente → onglet Chiffres ;
+    // demande de virement ou transfert → l’application s’ouvre simplement (ça se traite dans Orbis).
     func userNotificationCenter(_ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse,
                                 withCompletionHandler completionHandler: @escaping () -> Void) {
         let screen = response.notification.request.content.userInfo["ecran"] as? String ?? "alerte"
-        if screen == "alerte" {
-            Task { @MainActor in AppModel.shared.open(URL(string: "orbismini://alerte")!) }
+        if screen == "alerte" || screen == "chiffres" {
+            Task { @MainActor in AppModel.shared.open(URL(string: "orbismini://" + screen)!) }
         }
         completionHandler()
     }
