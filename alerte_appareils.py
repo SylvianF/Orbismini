@@ -69,8 +69,12 @@ def _name_key():
     return hashlib.sha256(("orbismini-nom:" + password).encode()).digest()
 
 
+KEPT_SPACES = "\u00a0\u202f"   # espaces insécables (milliers : « 1 240 € ») : gardées
+
+
 def _short_text(value, limit):
-    return " ".join("".join(c for c in str(value or "") if c.isprintable()).split())[:limit]
+    text = "".join(c if c.isprintable() or c in KEPT_SPACES else " " for c in str(value or ""))
+    return re.sub(r" +", " ", text).strip()[:limit]
 
 
 def clean_name(name):

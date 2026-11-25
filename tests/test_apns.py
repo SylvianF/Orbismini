@@ -269,6 +269,11 @@ class TransactionTests(Base):
         self.assertEqual(self.apple[0][2]["aps"]["alert"]["body"], "1 240 € versés · marge théorique 180 €")
         self.assertEqual(len(self.apple), 3)
 
+    def test_thin_spaces_kept_controls_removed(self):
+        self.assertEqual(AA._short_text("1\u202f240 €\nversés\t· marge", 100),
+                         "1\u202f240 € versés · marge")
+        self.assertEqual(AA._short_text("  Achat  ·  Nancy ", 100), "Achat · Nancy")
+
 
 class OrbisRouteTests(Base):
     def call(self, method, path, body=None, allowed=True):
