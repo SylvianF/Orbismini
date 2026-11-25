@@ -505,7 +505,7 @@ class Handler(SimpleHTTPRequestHandler):
         return bool(ALERT_KEY) and hmac.compare_digest(given.encode(), ALERT_KEY.encode())
 
     def orbis_events(self, method):
-        """Événements d’Orbis (demandes de virement, transferts) : téléphones qui ont l’application,
+        """Événements d’Orbis (demandes de virement, transferts, achats et ventes) : téléphones qui ont l’application,
         cases cochées dans Orbis, annonces. Clé d’Orbis seule (X-Alert-Key) ; vrai si traité ici."""
         path = urlparse(self.path).path
         if path not in ("/api/orbis/telephones", "/api/orbis/evenement"):
@@ -532,7 +532,8 @@ class Handler(SimpleHTTPRequestHandler):
                 self.send_json({"telephones": phones, "notifications": apns.enabled(),
                                 "evenements": list(AA.EVENTS)})
             elif method == "POST":
-                n = AA.STORE.event(body.get("type"), body.get("id"), body.get("titre"), body.get("texte"))
+                n = AA.STORE.event(body.get("type"), body.get("id"), body.get("titre"), body.get("texte"),
+                                   city=body.get("ville"))
                 self.send_json({"envoye": n, "notifications": apns.enabled()})
             else:
                 self.send_json({"error": "POST attendu."}, 405)

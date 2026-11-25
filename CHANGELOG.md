@@ -1,5 +1,13 @@
 # Historique
 
+## 25/11/2026 — Achats et ventes d'Orbis vers l'application iPhone, ville par ville
+
+- Nouveaux événements `achat` et `vente`, avec une `ville` : `POST /api/orbis/evenement`
+  `{type, ville, id, titre, texte}`. Seuls les téléphones cochés pour cette ville les reçoivent.
+- Cases d'un téléphone : `virement`, `transfert`, `achat:Nancy`, `vente:Calais`…
+  (`POST /api/orbis/telephones`).
+- La notification d'un achat ou d'une vente ouvre l'onglet Chiffres de l'application. Site inchangé.
+
 ## 25/11/2026 — Demandes de virement et transferts d'Orbis vers l'application iPhone
 
 - `GET /api/orbis/telephones` : téléphones qui ont l'application iPhone, avec le nom qu'on leur a

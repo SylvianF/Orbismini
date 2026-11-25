@@ -227,7 +227,8 @@ class OrbisEventTests(Base):
         s.set_events(d1[:16], ["virement"])
         s.set_events(d1[:16], [])
         self.assertEqual([x["evenements"] for x in s.phones()], [[], []])
-        for short, events in ((d1[:16], ["paie"]), ("0" * 16, ["virement"]), ("pas-un-id", []), (d1[:16], "virement")):
+        for short, events in ((d1[:16], ["paie"]), ("0" * 16, ["virement"]), ("pas-un-id", []), (d1[:16], "virement"),
+                              (d1[:16], ["achat"]), (d1[:16], ["virement:Nancy"]), (d1[:16], ["vente:N4ncy"])):
             with self.assertRaises(ValueError):
                 s.set_events(short, events)
         with self.assertRaises(ValueError):
@@ -242,6 +243,31 @@ class OrbisEventTests(Base):
         self.assertEqual(self.apple, [])
         with patch.dict(os.environ, ON), patch.object(apns, "jwt", lambda: "jeton"):
             self.assertEqual(s.event("virement", "v-1", "Demande", "", self.apple_post()), 1)   # pas « déjà envoyée »
+
+
+class TransactionTests(Base):
+    """Achats et ventes : téléphones choisis ville par ville, la notification ouvre Chiffres."""
+
+    def test_by_city_and_opens_chiffres(self):
+        s, d1, d2 = AA.Store(token="jeton-github"), AA.device_id(PHONE1), AA.device_id(PHONE2)
+        s.set_apns(d1, TOKEN1, "production", "Sylvian")
+        s.set_apns(d2, TOKEN2, "production", "Magasin")
+        listed = s.set_events(d1[:16], ["vente:Calais", "achat:Nancy", "achat:nancy", "virement", "achat:Troyes"])
+        self.assertEqual([x["evenements"] for x in listed if x["id"] == d1[:16]],
+                         [["virement", "achat:Nancy", "achat:Troyes", "vente:Calais"]])
+        s.set_events(d2[:16], ["achat:Calais", "vente:Calais"])
+        with patch.dict(os.environ, ON), patch.object(apns, "jwt", lambda: "jeton"):
+            post = self.apple_post()
+            self.assertEqual(s.event("achat", "Nancy-81234", "Achat · Nancy",
+                                     "1 240 € versés · marge théorique 180 €", post, city="NANCY"), 1)
+            self.assertEqual(s.event("vente", "Calais-5512", "Vente · Calais", "860 €", post, city="Calais"), 2)
+            self.assertEqual(s.event("vente", "Troyes-77", "Vente · Troyes", "", post, city="Troyes"), 0)
+            with self.assertRaises(ValueError):
+                s.event("achat", "x-1", "Achat", "", post)                 # ville obligatoire
+        self.assertEqual(self.apple[0][0], "https://api.push.apple.com/3/device/" + TOKEN1)
+        self.assertEqual(self.apple[0][2]["ecran"], "chiffres")
+        self.assertEqual(self.apple[0][2]["aps"]["alert"]["body"], "1 240 € versés · marge théorique 180 €")
+        self.assertEqual(len(self.apple), 3)
 
 
 class OrbisRouteTests(Base):
@@ -272,7 +298,7 @@ class OrbisRouteTests(Base):
                 patch.object(apns, "_post", self.apple_post()):
             status, data = self.call("GET", "/api/orbis/telephones")
             self.assertEqual(status, 200)
-            self.assertEqual(data["evenements"], ["virement", "transfert"])
+            self.assertEqual(data["evenements"], ["virement", "transfert", "achat", "vente"])
             self.assertTrue(data["notifications"])
             self.assertEqual([(x["id"], x["evenements"]) for x in data["telephones"]], [(d1[:16], [])])
             status, data = self.call("POST", "/api/orbis/telephones", {"id": d1[:16], "evenements": ["virement"]})
@@ -281,8 +307,12 @@ class OrbisRouteTests(Base):
                                        {"type": "virement", "id": "v-7", "titre": "Nouvelle demande de virement",
                                         "texte": "Rachel, Nancy"}), (200, {"envoye": 1, "notifications": True}))
             self.assertEqual(self.call("POST", "/api/orbis/evenement", {"type": "?", "id": "1", "titre": "x"})[0], 400)
+            self.call("POST", "/api/orbis/telephones", {"id": d1[:16], "evenements": ["vente:Nancy"]})
+            self.assertEqual(self.call("POST", "/api/orbis/evenement",
+                                       {"type": "vente", "ville": "Nancy", "id": "Nancy-9", "titre": "Vente · Nancy",
+                                        "texte": "2 100 €"}), (200, {"envoye": 1, "notifications": True}))
             self.assertEqual(self.call("GET", "/api/orbis/evenement")[0], 405)
-        self.assertEqual(len(self.apple), 1)
+        self.assertEqual(len(self.apple), 2)
 
     def test_other_paths_untouched(self):
         import server
