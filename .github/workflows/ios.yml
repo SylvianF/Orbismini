@@ -77,7 +77,7 @@ jobs:
           xcrun simctl bootstatus "$UDID" -b
           xcrun simctl status_bar "$UDID" override --time 9:41 --batteryState charged --batteryLevel 100 --cellularBars 4 --wifiBars 3 || true
           xcrun simctl install "$UDID" "$APP"
-          for shot in cours meteo alerte widget reglages connexion scan rachat cours:light cours:graphite; do
+          for shot in cours meteo alerte widget widget2 widget3 reglages connexion scan rachat cours:light cours:graphite; do
             screen=${shot%%:*}; theme=dark; [ "$shot" != "$screen" ] && theme=${shot#*:}
             name=$screen; [ "$theme" != dark ] && name=$screen-$theme
             xcrun simctl terminate "$UDID" fr.cndo.orbismini 2>/dev/null || true

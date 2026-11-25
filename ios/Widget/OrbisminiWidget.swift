@@ -7,13 +7,14 @@ import WidgetKit
 // « or », « argent 7 »… du widget Scriptable).
 
 enum MetalOption: String, AppEnum {
-    case or, argent
+    case or, argent, lesDeux
 
     static var typeDisplayRepresentation: TypeDisplayRepresentation { "Métal" }
     static var caseDisplayRepresentations: [MetalOption: DisplayRepresentation] {
-        [.or: "Or", .argent: "Argent"]
+        [.or: "Or", .argent: "Argent", .lesDeux: "Or et argent superposés"]
     }
     var metal: Metal { self == .argent ? .silver : .gold }
+    var both: Bool { self == .lesDeux }
 }
 
 enum PeriodOption: String, AppEnum {
@@ -50,6 +51,7 @@ struct CoursEntry: TimelineEntry {
     let date: Date
     let snapshot: Snapshot?
     let metal: Metal
+    var both = false
     let stale: Bool
     let message: String?
 }
@@ -63,7 +65,7 @@ struct CoursProvider: AppIntentTimelineProvider {
         let period = configuration.period.period
         let kept = SharedStore.snapshot(period)
         return CoursEntry(date: Date(), snapshot: kept ?? (context.isPreview ? DemoData.snapshot(period) : nil),
-                          metal: configuration.metal.metal, stale: false, message: nil)
+                          metal: configuration.metal.metal, both: configuration.metal.both, stale: false, message: nil)
     }
 
     func timeline(for configuration: CoursSettings, in context: Context) async -> Timeline<CoursEntry> {
@@ -72,14 +74,15 @@ struct CoursProvider: AppIntentTimelineProvider {
         do {
             let fresh = try await DataService.snapshot(period: period, client: .widget, preferWidgetKey: true)
             SharedStore.saveSnapshot(fresh)
-            entry = CoursEntry(date: Date(), snapshot: fresh, metal: configuration.metal.metal, stale: false, message: nil)
+            entry = CoursEntry(date: Date(), snapshot: fresh, metal: configuration.metal.metal,
+                               both: configuration.metal.both, stale: false, message: nil)
         } catch {
             // Hors connexion ou Render endormi : dernier relevé gardé, signalé par ⚠.
             let message = (error as? APIError) == .needsLogin
                 ? "Ouvre Orbismini et saisis le mot de passe."
                 : error.localizedDescription
             entry = CoursEntry(date: Date(), snapshot: SharedStore.snapshot(period), metal: configuration.metal.metal,
-                               stale: true, message: message)
+                               both: configuration.metal.both, stale: true, message: message)
         }
         return Timeline(entries: [entry], policy: .after(Date().addingTimeInterval(15 * 60)))
     }
@@ -90,9 +93,30 @@ struct CoursWidgetView: View {
     let entry: CoursEntry
 
     var body: some View {
-        WidgetContent(snapshot: entry.snapshot, metal: entry.metal, size: size, stale: entry.stale, message: entry.message)
-            .containerBackground(for: .widget) { Theme.background }
+        content
             .widgetURL(URL(string: "orbismini://cours"))
+    }
+
+    @ViewBuilder
+    private var content: some View {
+        if let lock {
+            LockContent(snapshot: entry.snapshot, metal: entry.metal, both: entry.both, size: lock)
+                .containerBackground(for: .widget) { Color.clear }
+        } else {
+            WidgetContent(snapshot: entry.snapshot, metal: entry.metal, size: size, stale: entry.stale,
+                          message: entry.message, both: entry.both)
+                .containerBackground(for: .widget) { Theme.background }
+        }
+    }
+
+    /// Écran verrouillé (et mode veille) : ligne, pastille ou rectangle.
+    private var lock: LockSize? {
+        switch family {
+        case .accessoryInline: return .inline
+        case .accessoryCircular: return .circular
+        case .accessoryRectangular: return .rectangular
+        default: return nil
+        }
     }
 
     private var size: WidgetSize {
@@ -110,8 +134,9 @@ struct CoursWidget: Widget {
             CoursWidgetView(entry: entry)
         }
         .configurationDisplayName("Cours de l’or")
-        .description("Or et argent avec leur courbe. Touche pour ouvrir Orbismini.")
-        .supportedFamilies([.systemSmall, .systemMedium, .systemLarge])
+        .description("Or et argent avec leur courbe, aussi sur l’écran verrouillé. Touche pour ouvrir Orbismini.")
+        .supportedFamilies([.systemSmall, .systemMedium, .systemLarge,
+                            .accessoryInline, .accessoryCircular, .accessoryRectangular])
     }
 }
 

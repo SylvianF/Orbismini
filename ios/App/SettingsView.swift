@@ -103,28 +103,29 @@ struct SettingsView: View {
     }
 }
 
-/// Le widget tel qu’il paraît sur l’écran d’accueil, aux trois tailles (mêmes vues que le widget).
+/// Le widget tel qu’il paraît sur l’écran d’accueil (trois tailles) et sur l’écran verrouillé
+/// (mêmes vues que le widget).
 struct WidgetPreviewView: View {
     @Environment(\.dismiss) private var dismiss
-    @State private var metal: Metal = .gold
+    @State private var choice = 0      // 0 : or, 1 : argent, 2 : les deux
+
+    private var metal: Metal { choice == 1 ? .silver : .gold }
+    private var lockFirst: Bool { Config.startScreen == "widget3" }
 
     var body: some View {
         ScrollView {
             VStack(spacing: 18) {
-                Picker("Métal", selection: $metal) {
-                    Text("Or").tag(Metal.gold)
-                    Text("Argent").tag(Metal.silver)
+                Picker("Métal", selection: $choice) {
+                    Text("Or").tag(0)
+                    Text("Argent").tag(1)
+                    Text("Les deux").tag(2)
                 }
                 .pickerStyle(.segmented)
+                if lockFirst { lockScreen }
                 ForEach(WidgetSize.allCases, id: \.self) { size in
-                    VStack(alignment: .leading, spacing: 6) {
-                        Text(size.title).font(.caption).foregroundStyle(Theme.muted)
-                        WidgetContent(snapshot: snapshot, metal: metal, size: size)
-                            .padding(EdgeInsets(top: 14, leading: 14, bottom: 12, trailing: 14))
-                            .frame(width: size.previewSize.width, height: size.previewSize.height)
-                            .background(Theme.background, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
-                    }
+                    homeWidget(size)
                 }
+                if !lockFirst { lockScreen }
                 Text(Config.isDemo || SharedStore.snapshot(.day) == nil ? "Données d’exemple." : "Derniers cours gardés sur l’iPhone.")
                     .font(.caption).foregroundStyle(Theme.muted)
             }
@@ -135,6 +136,45 @@ struct WidgetPreviewView: View {
         .navigationTitle("Aperçu du widget")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Fermer") { dismiss() } } }
+        .onAppear {
+            // Captures d’écran : « -ecran widget2 » (or et argent superposés), « widget3 » (écran verrouillé en haut).
+            if Config.startScreen == "widget2" || Config.startScreen == "widget3" { choice = 2 }
+        }
+    }
+
+    private func homeWidget(_ size: WidgetSize) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(size.title).font(.caption).foregroundStyle(Theme.muted)
+            WidgetContent(snapshot: snapshot, metal: metal, size: size, both: choice == 2)
+                .padding(EdgeInsets(top: 14, leading: 14, bottom: 12, trailing: 14))
+                .frame(width: size.previewSize.width, height: size.previewSize.height)
+                .background(Theme.background, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+        }
+    }
+
+    /// Écran verrouillé : d’une seule couleur, sur une photo sombre.
+    private var lockScreen: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text("Écran verrouillé").font(.caption).foregroundStyle(Theme.muted)
+            VStack(spacing: 12) {
+                lock(.inline)
+                HStack(spacing: 12) {
+                    lock(.circular)
+                    lock(.rectangular)
+                }
+            }
+            .foregroundStyle(.white)
+            .environment(\.colorScheme, .dark)
+            .padding(16)
+            .frame(width: 338)
+            .background(LinearGradient(colors: [Color(white: 0.24), Color(white: 0.08)], startPoint: .top, endPoint: .bottom),
+                        in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+        }
+    }
+
+    private func lock(_ size: LockSize) -> some View {
+        LockContent(snapshot: snapshot, metal: metal, both: choice == 2, size: size)
+            .frame(width: size.previewSize.width, height: size.previewSize.height)
     }
 
     private var snapshot: Snapshot {

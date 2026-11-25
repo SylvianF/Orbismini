@@ -47,7 +47,7 @@ final class AppModel: ObservableObject {
         case "chiffres": tab = .chiffres
         case "alerte": showAlert = true
         case "reglages": showSettings = true
-        case "widget": showWidgetPreview = true
+        case "widget", "widget2", "widget3": showWidgetPreview = true
         default: break
         }
     }

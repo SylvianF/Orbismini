@@ -28,9 +28,17 @@ struct WidgetContent: View {
     let size: WidgetSize
     var stale = false
     var message: String?
+    /// Or et argent superposés (variation en %), au lieu d’un seul métal.
+    var both = false
 
     var body: some View {
-        if let snapshot {
+        if let snapshot, both {
+            switch size {
+            case .small: bothSmall(snapshot)
+            case .medium: bothMedium(snapshot)
+            case .large: bothLarge(snapshot)
+            }
+        } else if let snapshot {
             switch size {
             case .small: small(snapshot)
             case .medium: medium(snapshot)
@@ -81,6 +89,53 @@ struct WidgetContent: View {
         MetalBlock(series: series, metal: m, compact: false)
         if series.hasCurve {
             CourseChart(points: series.points, color: color(m))
+        }
+    }
+
+    // MARK: - Or et argent superposés
+
+    private func bothSmall(_ s: Snapshot) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            compactLine(s.gold, .gold)
+            compactLine(s.silver, .silver)
+            OverlayChart(gold: s.gold.points, silver: s.silver.points, lineWidth: 2.6, showScales: false).padding(.top, 3)
+            Footer(snapshot: s, metal: .gold, stale: stale)
+        }
+    }
+
+    private func bothMedium(_ s: Snapshot) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            HStack(alignment: .top, spacing: 12) {
+                OverlayLegend(series: s.gold, metal: .gold)
+                OverlayLegend(series: s.silver, metal: .silver)
+                Spacer(minLength: 0)
+            }
+            OverlayChart(gold: s.gold.points, silver: s.silver.points, lineWidth: 3)
+            Footer(snapshot: s, metal: .gold, stale: stale)
+        }
+    }
+
+    private func bothLarge(_ s: Snapshot) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(alignment: .top, spacing: 18) {
+                OverlayLegend(series: s.gold, metal: .gold, big: true)
+                OverlayLegend(series: s.silver, metal: .silver, big: true)
+                Spacer(minLength: 0)
+            }
+            OverlayChart(gold: s.gold.points, silver: s.silver.points, lineWidth: 3.6)
+            Text("Chaque courbe a son échelle : or à gauche, argent à droite (€/kg)")
+                .font(.system(size: 9)).foregroundStyle(Theme.muted).lineLimit(1).minimumScaleFactor(0.7)
+            Footer(snapshot: s, metal: .gold, stale: stale)
+        }
+    }
+
+    private func compactLine(_ series: MetalSeries, _ m: Metal) -> some View {
+        HStack(spacing: 4) {
+            Text(m == .gold ? "Or" : "Ag").font(.system(size: 11, weight: .bold)).foregroundStyle(color(m))
+            Text(Fmt.variation(series, withAmount: false))
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundStyle(Theme.trend(series.delta))
+                .lineLimit(1).minimumScaleFactor(0.6)
         }
     }
 
