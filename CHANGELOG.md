@@ -1,5 +1,10 @@
 # Historique
 
+## 25/11/2026 — Notifications d'Orbis : milliers bien séparés
+
+- Les espaces insécables du texte envoyé par Orbis (« 1 240 € ») sont gardées ; elles étaient
+  retirées (« 1240 € »). Site inchangé.
+
 ## 25/11/2026 — Achats et ventes d'Orbis vers l'application iPhone, ville par ville
 
 - Nouveaux événements `achat` et `vente`, avec une `ville` : `POST /api/orbis/evenement`
