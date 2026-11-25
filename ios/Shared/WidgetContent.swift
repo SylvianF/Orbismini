@@ -123,8 +123,6 @@ struct WidgetContent: View {
                 Spacer(minLength: 0)
             }
             OverlayChart(gold: s.gold.points, silver: s.silver.points, lineWidth: 3.6)
-            Text("Chaque courbe a son échelle : or à gauche, argent à droite (€/kg)")
-                .font(.system(size: 9)).foregroundStyle(Theme.muted).lineLimit(1).minimumScaleFactor(0.7)
             Footer(snapshot: s, metal: .gold, stale: stale)
         }
     }

@@ -100,7 +100,7 @@ struct OverlayLegend: View {
                 Capsule()
                     .fill(metal == .gold ? Theme.gold : Theme.silver)
                     .frame(width: 14, height: 4)
-                Text(metal == .gold ? "Or · échelle à gauche" : "Argent · échelle à droite")
+                Text(metal == .gold ? "Or" : "Argent")
                     .font(.system(size: big ? 12 : 10, weight: .semibold))
                     .foregroundStyle(metal == .gold ? Theme.gold : Theme.silver)
                     .lineLimit(1).minimumScaleFactor(0.7)
