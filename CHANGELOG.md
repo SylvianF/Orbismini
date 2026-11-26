@@ -1,5 +1,10 @@
 # Historique
 
+## 26/11/2026 — Application iPhone : PDF de l'estimation, SMS ou e-mail au client
+
+- Le bouton « Envoyer au client » de Rachat → Imprimer fait le PDF A4 de la fiche et propose un
+  SMS au numéro saisi, un e-mail à l'adresse saisie, ou le partage de l'iPhone. Site inchangé.
+
 ## 26/11/2026 — Estimation envoyée au client ; notifications « achat à risque » et « VD »
 
 - Rachat → Imprimer : dans l'application iPhone, bouton « Envoyer au client » (PDF de la fiche,
