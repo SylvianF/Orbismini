@@ -1,5 +1,11 @@
 # Historique
 
+## 26/11/2026 — Chiffres : « % GtaX » et cours retenu, comme l'Accueil d'Orbis
+
+- Détail des achats : la case s'appelle « % GtaX » et montre dessous, en petit, le cours retenu
+  à la saisie (« Cours 1 234,5 »), comme l'Accueil d'Orbis. Données déjà envoyées par Orbis
+  (avec le droit marge).
+
 ## 25/11/2026 — Notifications d'Orbis : milliers bien séparés
 
 - Les espaces insécables du texte envoyé par Orbis (« 1 240 € ») sont gardées ; elles étaient

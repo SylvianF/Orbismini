@@ -104,7 +104,9 @@
   const time = iso => new Date(iso).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
   const fine = t => Number(t).toLocaleString('fr-FR', { maximumFractionDigits: 2 }) + ' ‰';
   const pct = v => Number(v).toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' %';
-  const cell = ([k, v, cls]) => el('span', { className: cls || '' }, el('small', { textContent: k }), el('b', { textContent: v }));
+  // Case : intitulé, valeur, classe, et une petite ligne dessous (cours retenu, comme l'Accueil d'Orbis).
+  const cell = ([k, v, cls, sub]) =>
+    el('span', { className: cls || '' }, el('small', { textContent: k }), el('b', { textContent: v }), sub ? el('small', { textContent: sub }) : null);
   function item(l, note, cells) {
     const name = (l.count > 1 ? l.count + ' × ' : '') + (l.article || l.description || 'Objet');
     const facts = [l.titre ? fine(l.titre) : null, l.weight != null ? grams(l.weight) : null, note].filter(Boolean).join(' · ');
@@ -121,7 +123,7 @@
     item(l, '', [
       ['Taxe comprise', l.gross != null ? euro(l.gross) : null],
       ['Net payé', l.net != null ? euro(l.net) : null],
-      ['GtaX', l.gtax != null ? pct(l.gtax) : null],
+      ['% GtaX', l.gtax != null ? pct(l.gtax) : null, '', l.gtax != null && l.cours != null ? 'Cours ' + Number(l.cours).toLocaleString('fr-FR', { maximumFractionDigits: 2 }) : ''],
       ['Marge théo.', l.theory != null ? euro(l.theory) : null, l.theory != null ? margin(l.theory) : ''],
     ]);
   const saleItem = l =>
