@@ -14,6 +14,9 @@ jobs:
   tests:
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    env:
+      TZ: Europe/Paris
+      PYTHONIOENCODING: utf-8
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -22,4 +25,17 @@ jobs:
       - name: Bibliothèques (notifications de l'application iPhone)
         run: pip install -r requirements.txt
       - name: Tests
-        run: python -m unittest discover -s tests
+        run: |
+          ok=0
+          python -m unittest discover -s tests > tests.log 2>&1 || ok=$?
+          tail -5 tests.log
+          # Échecs en annotations (lisibles sans connexion) : le test, puis la ligne de l'erreur.
+          if [ "$ok" -ne 0 ]; then
+            grep -E "^(FAIL|ERROR): " tests.log | sort -u | head -30 | while IFS= read -r line; do
+              echo "::error::$line"
+            done
+            grep -E "^[A-Za-z_.]*(Error|Exception|Failure)[:( ]" tests.log | sort -u | head -30 | while IFS= read -r line; do
+              echo "::error::$(printf '%s' "$line" | cut -c1-900)"
+            done
+          fi
+          exit $ok

@@ -1,5 +1,9 @@
 # Historique
 
+## 26/11/2026 — Tests du serveur : détail des échecs
+
+- Le contrôle « Tests du serveur » affiche chaque échec en clair (annotations), à l'heure de Paris. Site inchangé.
+
 ## 26/11/2026 — L'application iPhone réunie avec le site dans main, tests avant mise en ligne
 
 - Le dossier `ios/` (application iPhone, jusqu'ici sur la branche `app-ios`) est fusionné dans
