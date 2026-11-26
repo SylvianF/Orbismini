@@ -1,5 +1,11 @@
 # Historique
 
+## 26/11/2026 — Son des notifications : celui d'Orbis
+
+- Sylvian préfère le son d'Orbis à l'arrivée d'une demande de virement (trois notes montantes) :
+  c'est lui que joue l'application iPhone, sous le même nom « orbismini.caf ». Il remplace le son
+  Mixkit de l'entrée précédente, qui n'a jamais été diffusé. Site inchangé.
+
 ## 26/11/2026 — Notifications de l'application iPhone : un son commun
 
 - Les notifications envoyées par Apple demandent le son « orbismini.caf », rangé dans
