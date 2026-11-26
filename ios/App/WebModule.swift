@@ -293,7 +293,10 @@ private struct WebPage: UIViewRepresentable {
                 let body = message.body as? [String: Any] ?? [:]
                 let text = { (k: String) in (body[k] as? String ?? "").trimmingCharacters(in: .whitespacesAndNewlines) }
                 let (client, phone, email) = (text("client"), text("phone"), text("email"))
-                Task { @MainActor in EstimateShare.shared.send(from: web, client: client, phone: phone, email: email) }
+                let pdf = Data(base64Encoded: text("pdf")).flatMap { $0.starts(with: Array("%PDF".utf8)) ? $0 : nil }
+                Task { @MainActor in
+                    EstimateShare.shared.send(from: web, client: client, phone: phone, email: email, serverPDF: pdf)
+                }
                 return
             }
             guard message.name == "imprimer" else { return }

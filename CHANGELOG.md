@@ -1,5 +1,10 @@
 # Historique
 
+## 27/11/2026 — Application iPhone : la Proposition de rachat d'Orbis envoyée au client
+
+- L'application envoie par SMS ou e-mail le PDF fabriqué par le serveur (Proposition de rachat
+  d'Orbis) ; la fiche imprimable reste le secours. Site inchangé.
+
 ## 27/11/2026 — « Envoyer au client » : la Proposition de rachat d'Orbis
 
 - `proposition_pdf.py` : copie tel quel du module d'Orbis (même PDF qu'au comptoir), avec

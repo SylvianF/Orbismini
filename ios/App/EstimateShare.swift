@@ -3,18 +3,19 @@ import UIKit
 import UniformTypeIdentifiers
 import WebKit
 
-/// « Envoyer au client » (Rachat → Imprimer, print.js) : la fiche d’estimation, telle qu’elle
-/// s’imprime, devient un PDF A4 ; puis SMS ou e-mail adressé au client (numéro et adresse saisis
-/// dans la fenêtre d’impression), ou le partage habituel de l’iPhone.
+/// « Envoyer au client » (Rachat → Imprimer, print.js) : la Proposition de rachat d’Orbis, en PDF
+/// fabriqué par le serveur (proposition.py) ; à défaut, la fiche imprimable du site faite en PDF ici.
+/// Puis SMS ou e-mail adressé au client (numéro et adresse saisis dans la fenêtre d’impression),
+/// ou le partage habituel de l’iPhone.
 @MainActor
 final class EstimateShare: NSObject {
     static let shared = EstimateShare()
 
-    private static let body = "Bonjour,\n\nVoici votre estimation de rachat. Les cours de l’or évoluant, elle est valable 2 heures.\n\nÀ bientôt."
+    private static let body = "Bonjour,\n\nVoici votre proposition de rachat. Les cours de l’or évoluant, elle est valable 2 heures.\n\nÀ bientôt."
 
-    func send(from web: WKWebView, client: String, phone: String, email: String) {
+    func send(from web: WKWebView, client: String, phone: String, email: String, serverPDF: Data? = nil) {
         guard let host = WebPageTop.of(web) else { return }
-        let pdf = Self.pdf(from: web)
+        let pdf = serverPDF ?? Self.pdf(from: web)
         let name = Self.fileName(client: client)
         var choices: [(String, () -> Void)] = []
         if !phone.isEmpty, MFMessageComposeViewController.canSendText(), MFMessageComposeViewController.canSendAttachments() {
@@ -61,7 +62,7 @@ final class EstimateShare: NSObject {
         f.timeZone = Fmt.paris
         f.dateFormat = "dd-MM-yyyy HH'h'mm"
         let who = client.components(separatedBy: CharacterSet(charactersIn: "/\\:?*\"<>|")).joined()
-        return "Estimation" + (who.isEmpty ? "" : " " + who) + " " + f.string(from: now) + ".pdf"
+        return "Proposition de rachat" + (who.isEmpty ? "" : " " + who) + " " + f.string(from: now) + ".pdf"
     }
 
     // MARK: - Envois
@@ -78,7 +79,7 @@ final class EstimateShare: NSObject {
     private func mail(_ pdf: Data, _ name: String, to email: String, from host: UIViewController) {
         let c = MFMailComposeViewController()
         c.setToRecipients([email])
-        c.setSubject("Votre estimation de rachat")
+        c.setSubject("Votre proposition de rachat")
         c.setMessageBody(Self.body, isHTML: false)
         c.addAttachmentData(pdf, mimeType: "application/pdf", fileName: name)
         c.mailComposeDelegate = self
