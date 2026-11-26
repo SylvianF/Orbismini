@@ -14,7 +14,7 @@ from pathlib import Path, PurePosixPath
 from html.parser import HTMLParser
 from urllib.request import Request, urlopen
 from urllib.parse import urlparse, parse_qs, unquote
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timezone
 from http.cookies import SimpleCookie
 import hashlib, hmac, json, os, re, unicodedata, time
 

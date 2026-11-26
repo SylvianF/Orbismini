@@ -1,10 +1,8 @@
 """Cotations CPoR (Loomis) : même source et mêmes contrôles que l’ancienne GoldApp."""
 
-import re, json, time, threading, unicodedata
+import re, time, threading
 from html import unescape
-from pathlib import Path
 from datetime import datetime, timezone, timedelta
-from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 from urllib.request import Request, urlopen
 
 BASE = "https://www.loomis-fxgs.fr"
