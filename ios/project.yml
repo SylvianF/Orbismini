@@ -46,6 +46,7 @@ targets:
             CFBundleURLSchemes:
               - orbismini
         NSCameraUsageDescription: Orbiscan, pièce inconnue et ticket de frais prennent une photo.
+        NSFaceIDUsageDescription: Face ID protège les chiffres, les marges et les montants affichés par Orbismini.
         NSPhotoLibraryUsageDescription: Choisir une photo déjà prise pour un scan ou un ticket.
         NSPhotoLibraryAddUsageDescription: Enregistrer une estimation ou un ticket dans les photos.
     entitlements:

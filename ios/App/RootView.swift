@@ -3,6 +3,8 @@ import SwiftUI
 struct RootView: View {
     @EnvironmentObject private var model: AppModel
     @AppStorage(ThemeChoice.key, store: SharedStore.defaults) private var themeRaw = ThemeChoice.saphir.rawValue
+    @ObservedObject private var lock = AppLock.shared
+    @Environment(\.scenePhase) private var phase
 
     private var theme: ThemeChoice { ThemeChoice(rawValue: themeRaw) ?? .saphir }
 
@@ -30,6 +32,8 @@ struct RootView: View {
                 .sheet(isPresented: $model.showAlert) { NavigationStack { AlerteView() } }
                 .sheet(isPresented: $model.showSettings) { NavigationStack { SettingsView() } }
                 .sheet(isPresented: $model.showWidgetPreview) { NavigationStack { WidgetPreviewView() } }
+                // Verrou Face ID (AppLock) : par-dessus les onglets ; les feuilles sont refermées en partant.
+                .overlay { if lock.locked || lock.hidden { LockScreen(lock: lock) } }
             } else {
                 LoginView()
             }
@@ -37,6 +41,18 @@ struct RootView: View {
         .background(Theme.bg2.ignoresSafeArea())
         .preferredColorScheme(theme.colorScheme)
         .tint(Theme.gold)
+        .onChange(of: phase) { _, now in
+            if now == .background {
+                lock.wentAway()
+                if lock.enabled {
+                    model.showAlert = false
+                    model.showSettings = false
+                    model.showWidgetPreview = false
+                }
+            }
+            if now == .active { lock.cameBack() }
+        }
+        .onAppear { lock.unlock() }
         // Thème changé : tout est redessiné, pages web comprises (elles relisent le thème).
         .id(themeRaw)
     }

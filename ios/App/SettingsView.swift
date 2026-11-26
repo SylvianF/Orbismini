@@ -9,6 +9,7 @@ struct SettingsView: View {
     @State private var saved = false
     @AppStorage(Push.nameKey, store: SharedStore.defaults) private var phoneName = ""
     @State private var nameSent = false
+    @ObservedObject private var lock = AppLock.shared
 
     var body: some View {
         Form {
@@ -39,12 +40,19 @@ struct SettingsView: View {
             } footer: {
                 Text("Ce nom s’affiche dans Orbis, où l’on choisit quels téléphones reçoivent les demandes de virement et les transferts. Il faut que les notifications soient acceptées (cloche).")
             }
-            Section("Connexion") {
+            Section {
                 LabeledContent("Serveur", value: Config.host)
+                if AppLock.available {
+                    Toggle("Verrouiller avec " + lock.biometryName, isOn: Binding(get: { lock.enabled }, set: { lock.enabled = $0 }))
+                }
                 Button("Verrouiller l’application", role: .destructive) {
                     app.logout()
                     dismiss()
                 }
+            } header: {
+                Text("Connexion")
+            } footer: {
+                Text("Avec le verrou, Orbismini demande " + lock.biometryName + " quand on y revient après plus de 30 secondes. « Verrouiller l’application » efface le mot de passe : il faudra le ressaisir.")
             }
             Section {
                 SecureField("Clé du widget (facultative)", text: $widgetKey)
