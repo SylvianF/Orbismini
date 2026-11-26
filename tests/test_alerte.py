@@ -12,7 +12,7 @@ class AlertTests(unittest.TestCase):
         A.FILE = os.path.join(self.tmp.name, "etat.json")
         A._state = None
         A._sent.clear()
-        A._checked[0] = 0.0
+        A._checked[0] = float("-inf")
         self.sent = []
         A._post = lambda topic, title, body: self.sent.append((topic, title, body))
 
@@ -31,7 +31,7 @@ class AlertTests(unittest.TestCase):
         A.update(dict(above=120000, below="100000", updated="2026-11-13T10:00:00+00:00"), key)
         now = datetime.now(timezone.utc).isoformat()
         self.assertFalse(A.check(lambda: (110000.0, now), key))
-        A._checked[0] = 0.0
+        A._checked[0] = float("-inf")
         self.assertTrue(A.check(lambda: (120500.0, now), key))
         s = A.state()
         self.assertNotIn("above", s)
@@ -42,7 +42,7 @@ class AlertTests(unittest.TestCase):
         self.assertIn("au-dessus de 120", title)
         self.assertIn("120", body)
         # Contrôle suivant : rien de nouveau, rien d'envoyé.
-        A._checked[0] = 0.0
+        A._checked[0] = float("-inf")
         A.check(lambda: (121000.0, now), key)
         self.assertEqual(len(self.sent), 1)
 
@@ -60,12 +60,12 @@ class AlertTests(unittest.TestCase):
         A.update(dict(move="2", updated="2026-11-13T10:00:00+00:00"), key)
         now = datetime.now(timezone.utc).isoformat()
         self.assertFalse(A.check(lambda: (111000.0, now, 110000.0), key))
-        A._checked[0] = 0.0
+        A._checked[0] = float("-inf")
         self.assertTrue(A.check(lambda: (107500.0, now, 110000.0), key))
         self.assertEqual(A.state()["move"], 2.0)
         self.assertEqual(self.sent[-1][1], "Or en baisse de 2,3 % sur 24 h")
         self.assertIn("110", self.sent[-1][2])
-        A._checked[0] = 0.0
+        A._checked[0] = float("-inf")
         A.check(lambda: (107000.0, now, 110000.0), key)  # même sens, même jour : rien
         self.assertEqual(len(self.sent), 1)
         # Venue d'Orbis, une alerte de variation garde ses champs.

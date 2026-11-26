@@ -1,5 +1,11 @@
 # Historique
 
+## 26/11/2026 — Alerte de cours : le premier contrôle n'est plus sauté
+
+- Le contrôle des alertes (au plus une fois par minute) partait de l'heure 0 de l'horloge interne :
+  juste après un démarrage du serveur, le premier contrôle pouvait être sauté. Vu grâce aux tests
+  lancés par GitHub. Site inchangé.
+
 ## 26/11/2026 — Tests du serveur : détail des échecs
 
 - Le contrôle « Tests du serveur » affiche chaque échec en clair (annotations), à l'heure de Paris. Site inchangé.

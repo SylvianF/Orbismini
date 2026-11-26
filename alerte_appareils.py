@@ -148,7 +148,7 @@ class Store:
         self.data = None     # {"devices": {id: {state, seen}}, "orbis": [id, …]}
         self.sha = None
         self.sent = set()
-        self.checked = 0.0
+        self.checked = float("-inf")   # le premier contrôle passe, même juste après un démarrage
 
     # ---------------------------------------------------------------- GitHub
     def _load(self):

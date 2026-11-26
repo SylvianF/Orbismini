@@ -28,7 +28,7 @@ FILE = os.path.join(tempfile.gettempdir(), "orapp-alerte.json")
 _lock = threading.Lock()
 _state = None
 _sent = set()
-_checked = [0.0]
+_checked = [float("-inf")]   # jamais contrôlé : le premier contrôle passe (même juste après un démarrage)
 # Appelés pour chaque alerte commune envoyée à ntfy (server.py : notifications de l’application iPhone).
 LISTENERS = []
 
