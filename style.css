@@ -1402,8 +1402,45 @@ body::before {
   stroke-linejoin: round;
   transition: transform 0.2s;
 }
-.ch-fold[open] .ch-chevron {
+.ch-fold[open] > summary .ch-chevron,
+.ch-tx[open] > summary .ch-chevron {
   transform: rotate(90deg);
+}
+/* Une transaction : ligne repliée (heure, net payé, marge), les objets en dépliant. */
+.ch-tx > summary {
+  list-style: none;
+  cursor: pointer;
+  align-items: center;
+  min-height: 40px;
+}
+.ch-tx > summary::-webkit-details-marker {
+  display: none;
+}
+.ch-tx-time {
+  flex: none;
+  min-width: 38px;
+}
+.ch-tx-sum {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: flex-end;
+  gap: 2px 12px;
+  margin-left: auto;
+  text-align: right;
+}
+.ch-tx-sum small {
+  color: var(--muted);
+  font-size: 12px;
+}
+.ch-tx-sum .ch-margin b {
+  color: var(--up);
+}
+.ch-tx-sum .ch-neg b {
+  color: var(--down);
+}
+.ch-tx:not([open]) > .ch-item {
+  display: none;
 }
 .ch-lines {
   display: grid;

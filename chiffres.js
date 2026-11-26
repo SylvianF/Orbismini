@@ -139,16 +139,31 @@
       if (!groups.has(k)) groups.set(k, []);
       groups.get(k).push(l);
     });
-    return [...groups.values()].map(g => {
+    // Une ligne repliée par transaction : heure, net payé (ou total), marge ; les objets en dépliant.
+    return [...groups.values()].map((g, i) => {
       const total = buy ? sum(g, 'net') : sum(g, 'total');
+      const gain = buy ? sum(g, 'theory') : sum(g, 'margin');
+      const key = (buy ? 'achat:' : 'vente:') + (g[0].cadre ?? 'ligne' + i);
       return el(
-        'div',
-        { className: 'ch-obj' },
+        'details',
+        {
+          className: 'ch-obj ch-tx',
+          open: opened.has(key),
+          ontoggle: e => (e.target.open ? opened.add(key) : opened.delete(key)),
+        },
         el(
-          'div',
+          'summary',
           { className: 'ch-obj-head' },
-          el('small', { textContent: buy && g[0].at ? time(g[0].at) : '' }),
-          total != null ? el('b', { textContent: (buy ? 'Net payé ' : 'Total TTC ') + euro(total) }) : null
+          el('small', { className: 'ch-tx-time', textContent: g[0].at ? time(g[0].at) : '' }),
+          el(
+            'span',
+            { className: 'ch-tx-sum' },
+            total != null ? el('b', { textContent: (buy ? 'Net payé ' : 'Total TTC ') + euro(total) }) : null,
+            gain != null
+              ? el('span', { className: margin(gain) }, el('small', { textContent: buy ? 'Marge théo. ' : 'Marge ' }), el('b', { textContent: euro(gain) }))
+              : null
+          ),
+          chevron()
         ),
         ...g.map(buy ? buyItem : saleItem)
       );

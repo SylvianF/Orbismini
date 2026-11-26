@@ -1,5 +1,11 @@
 # Historique
 
+## 26/11/2026 — Chiffres : une ligne déroulante par transaction
+
+- En dépliant « Achats » ou « Ventes », chaque transaction tient sur une ligne : l'heure, le net
+  payé (ou le total TTC pour une vente) et la marge (théorique pour un achat). On la touche pour
+  voir les objets. Les lignes ouvertes restent ouvertes d'un rafraîchissement à l'autre.
+
 ## 26/11/2026 — Chiffres : « % GtaX » et cours retenu, comme l'Accueil d'Orbis
 
 - Détail des achats : la case s'appelle « % GtaX » et montre dessous, en petit, le cours retenu
