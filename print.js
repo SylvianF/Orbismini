@@ -5,7 +5,7 @@
   const dialog = document.createElement('dialog');
   dialog.id = 'client-print-dialog';
   dialog.innerHTML =
-    '<form><h2>Imprimer l’estimation</h2><label>Nom et prénom<input name="client" autocomplete="off"></label><label>Téléphone<input name="phone" type="tel" autocomplete="off"></label><label>Adresse e-mail<input name="email" type="email" autocomplete="off"></label><label class="print-check"><input name="internal" type="checkbox">Imprimer les pourcentages FC / GtaX</label><p id="print-error" role="alert"></p><div class="print-actions"><button type="button" id="print-cancel" class="secondary">Annuler</button><button type="submit">Imprimer</button></div></form>';
+    '<form><h2>Imprimer l’estimation</h2><label>Nom et prénom<input name="client" autocomplete="off"></label><label>Téléphone<input name="phone" type="tel" autocomplete="off"></label><label>Adresse e-mail<input name="email" type="email" autocomplete="off"></label><label class="print-check"><input name="internal" type="checkbox">Imprimer les pourcentages FC / GtaX</label><p id="print-error" role="alert"></p><div class="print-actions"><button type="button" id="print-cancel" class="secondary">Annuler</button><button type="button" id="print-send" class="secondary" hidden>Envoyer au client</button><button type="submit">Imprimer</button></div></form>';
   document.body.append(dialog);
   const sheet = document.createElement('article');
   sheet.id = 'client-print-sheet';
@@ -152,13 +152,13 @@
     dialog.showModal();
   });
   document.getElementById('print-cancel').onclick = () => dialog.close();
-  form.addEventListener('submit', async e => {
-    e.preventDefault();
+  // Fiche prête (lignes complètes, logo chargé) : vrai ; sinon le message d'erreur est affiché.
+  async function prepare() {
     const rows = window.GoldEstimate.snapshot();
     if (!rows.length || rows.some(r => !r.result)) {
       document.getElementById('print-error').textContent =
         'Complète toutes les lignes avant d’imprimer.';
-      return;
+      return false;
     }
     build(rows);
     const image = sheet.querySelector('img');
@@ -167,11 +167,33 @@
     } catch {
       document.getElementById('print-error').textContent =
         'Le logo n’a pas pu être chargé. Réessaie après actualisation.';
-      return;
+      return false;
     }
+    return true;
+  }
+  form.addEventListener('submit', async e => {
+    e.preventDefault();
+    if (!(await prepare())) return;
     dialog.close();
     window.print();
   });
+  // Application iPhone : « Envoyer au client » fait un PDF de la fiche et ouvre un SMS ou un e-mail
+  // adressé au client (téléphone et e-mail saisis ci-dessus). Jamais les pourcentages internes.
+  const share = window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.partager;
+  const send = document.getElementById('print-send');
+  if (share) {
+    send.hidden = false;
+    send.addEventListener('click', async () => {
+      form.elements.internal.checked = false;
+      if (!(await prepare())) return;
+      dialog.close();
+      share.postMessage({
+        client: form.elements.client.value.trim(),
+        phone: form.elements.phone.value.trim(),
+        email: form.elements.email.value.trim(),
+      });
+    });
+  }
   document.getElementById('est-reset').addEventListener('click', () => {
     form.reset();
     sheet.replaceChildren();

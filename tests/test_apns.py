@@ -270,6 +270,17 @@ class TransactionTests(Base):
         self.assertEqual(self.apple[0][2]["aps"]["alert"]["body"], "1 240 € versés · marge théorique 180 €")
         self.assertEqual(len(self.apple), 3)
 
+    def test_risky_purchase_and_vd_by_city(self):
+        s, d1 = AA.Store(token="jeton-github"), AA.device_id(PHONE1)
+        s.set_apns(d1, TOKEN1, "production", "Sylvian")
+        s.set_events(d1[:16], ["risque:Calais", "vd:Nancy"])
+        with patch.dict(os.environ, ON), patch.object(apns, "jwt", lambda: "jeton"):
+            post = self.apple_post()
+            self.assertEqual(s.event("risque", "Calais-88", "⚠ Achat à risque · Calais", "marge théorique −85 €", post, city="Calais"), 1)
+            self.assertEqual(s.event("risque", "Nancy-89", "⚠ Achat à risque · Nancy", "", post, city="Nancy"), 0)
+            self.assertEqual(s.event("vd", "Nancy-VD12-vendre", "VD prête à vendre · Nancy", "", post, city="Nancy"), 1)
+        self.assertEqual([p["ecran"] for _, _, p in self.apple], ["chiffres", "chiffres"])
+
     def test_thin_spaces_kept_controls_removed(self):
         self.assertEqual(AA._short_text("1\u202f240 €\nversés\t· marge", 100),
                          "1\u202f240 € versés · marge")
@@ -304,7 +315,7 @@ class OrbisRouteTests(Base):
                 patch.object(apns, "_post", self.apple_post()):
             status, data = self.call("GET", "/api/orbis/telephones")
             self.assertEqual(status, 200)
-            self.assertEqual(data["evenements"], ["virement", "transfert", "achat", "vente"])
+            self.assertEqual(data["evenements"], ["virement", "transfert", "achat", "vente", "risque", "vd"])
             self.assertTrue(data["notifications"])
             self.assertEqual([(x["id"], x["evenements"]) for x in data["telephones"]], [(d1[:16], [])])
             status, data = self.call("POST", "/api/orbis/telephones", {"id": d1[:16], "evenements": ["virement"]})

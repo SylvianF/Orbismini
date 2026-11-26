@@ -15,9 +15,9 @@ l’empreinte de l’identifiant de chaque téléphone (jamais l’identifiant),
 dernières alertes. Le canal ntfy n’y est pas : il est calculé à partir de l’empreinte et d’une clé
 tirée du mot de passe d’Orbismini (réglages de Render), donc introuvable depuis le dépôt.
 
-Événements d’Orbis (demandes de virement, transferts entre agences, achats et ventes par ville) :
-Orbis choisit quels téléphones les reçoivent (cases cochées dans Orbis, « events » ici : « virement »,
-« transfert », « achat:Nancy », « vente:Calais »…) et les annonce au serveur, qui les envoie à
+Événements d’Orbis (demandes de virement, transferts entre agences ; par ville : achats, ventes,
+achats à risque, vente directe) : Orbis choisit quels téléphones les reçoivent (cases cochées dans
+Orbis, « events » ici : « virement », « transfert », « achat:Nancy », « risque:Calais », « vd:Troyes »…) et les annonce au serveur, qui les envoie à
 l’application iPhone de ces téléphones. Le nom donné au téléphone dans l’application
 est rangé chiffré (clé tirée du mot de passe d’Orbismini) : le dépôt ne montre aucun nom."""
 
@@ -39,8 +39,11 @@ FILE = "alertes.json"
 MAX_DEVICES = 200
 FORGET_DAYS = 90       # téléphone sans alerte en place ni visite depuis 90 jours : oublié
 SECRET = re.compile(r"[0-9a-f]{32}")
-EVENTS = ("virement", "transfert", "achat", "vente")   # événements d’Orbis qu’un téléphone peut recevoir
-CITY_EVENTS = ("achat", "vente")     # choisis ville par ville : « achat:Nancy »
+# Événements d’Orbis qu’un téléphone peut recevoir. « risque » : achat à marge théorique négative ou
+# à % GtaX inhabituel (seuils réglés dans Orbis) ; « vd » : vente directe en cours à envoyer ou prête
+# à vendre.
+EVENTS = ("virement", "transfert", "achat", "vente", "risque", "vd")
+CITY_EVENTS = ("achat", "vente", "risque", "vd")   # choisis ville par ville : « achat:Nancy »
 CITY = re.compile(r"[^\W\d_][^\W\d_' -]{0,28}[^\W\d_]|[^\W\d_]{1,2}")
 SHORT = re.compile(r"[0-9a-f]{16}")  # identifiant d’un téléphone donné à Orbis (début de l’empreinte)
 NAME_MAX = 40

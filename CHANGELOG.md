@@ -1,5 +1,12 @@
 # Historique
 
+## 26/11/2026 — Estimation envoyée au client ; notifications « achat à risque » et « VD »
+
+- Rachat → Imprimer : dans l'application iPhone, bouton « Envoyer au client » (PDF de la fiche,
+  SMS ou e-mail au client). Jamais les pourcentages internes FC / GtaX.
+- Serveur : deux nouveaux événements d'Orbis, par ville : « risque » (achat à marge théorique
+  négative ou % GtaX inhabituel) et « vd » (vente directe à envoyer ou prête à vendre).
+
 ## 26/11/2026 — Alerte de cours : le premier contrôle n'est plus sauté
 
 - Le contrôle des alertes (au plus une fois par minute) partait de l'heure 0 de l'horloge interne :
