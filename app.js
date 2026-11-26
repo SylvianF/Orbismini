@@ -309,7 +309,7 @@ function draw() {
     quote = JSON.parse(localStorage.getItem('or-spot-last') || 'null');
   } catch {}
   const at = new Date(quote?.updatedAt || '');
-  $('last-updated').textContent =
+  $('last-updated').textContent = $('pull-date').textContent =
     ['Kitco', 'BullionVault'].includes(quote?.source) &&
     Number.isFinite(quote.price) &&
     quote.price > 0 &&

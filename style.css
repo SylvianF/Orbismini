@@ -247,6 +247,22 @@ summary {
   color: var(--gold);
   border-color: var(--gold);
 }
+/* Date de la dernière actualisation, sous « Tire pour actualiser » (seul endroit où elle paraît
+   dans l'application iPhone, qui cache la ligne du haut). */
+#pull-indicator {
+  flex-wrap: wrap;
+  justify-content: center;
+  row-gap: 2px;
+}
+.pull-date {
+  flex-basis: 100%;
+  text-align: center;
+  font-size: 11px;
+  opacity: 0.75;
+}
+.pull-date:empty {
+  display: none;
+}
 .pull-arrow {
   display: inline-block;
   font-size: 16px;

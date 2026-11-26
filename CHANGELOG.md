@@ -1,5 +1,10 @@
 # Historique
 
+## 26/11/2026 — La date d'actualisation dans la pastille « Tire pour actualiser »
+
+- La pastille qui descend quand on tire l'écran vers le bas affiche aussi « Dernière
+  actualisation : … ». L'application iPhone cache la ligne du haut et la montre seulement là.
+
 ## 26/11/2026 — Chiffres : une ligne déroulante par transaction
 
 - En dépliant « Achats » ou « Ventes », chaque transaction tient sur une ligne : l'heure, le net
