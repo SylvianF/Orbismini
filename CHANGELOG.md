@@ -1,5 +1,14 @@
 # Historique
 
+## 26/11/2026 — L'application iPhone réunie avec le site dans main, tests avant mise en ligne
+
+- Le dossier `ios/` (application iPhone, jusqu'ici sur la branche `app-ios`) est fusionné dans
+  main : une seule copie du code. Envois TestFlight par étiquette posée sur main, et envoi
+  automatique du 1er des mois impairs depuis main.
+- Nouveau contrôle « Tests du serveur » (`.github/workflows/serveur.yml`) à chaque envoi ; Render
+  ne met en ligne qu'après sa réussite.
+- Application : verrou Face ID à la réouverture (après 30 s), réglable par téléphone. Site inchangé.
+
 ## 26/11/2026 — Son des notifications : celui d'Orbis
 
 - Sylvian préfère le son d'Orbis à l'arrivée d'une demande de virement (trois notes montantes) :

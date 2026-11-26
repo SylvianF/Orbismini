@@ -1,0 +1,25 @@
+# Tests du serveur d'Orbismini (dossier tests/) à chaque envoi sur main et sur les autres branches.
+# Render ne met en ligne une version de main qu'une fois ce contrôle réussi (réglage de Render :
+# Auto-Deploy « After CI Checks Pass »).
+name: Tests du serveur
+on:
+  push:
+    branches-ignore: [alertes, orbiscan-pc, captures-iphone]
+    paths-ignore: ["ios/**", ".github/workflows/ios*.yml"]
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Bibliothèques (notifications de l'application iPhone)
+        run: pip install -r requirements.txt
+      - name: Tests
+        run: python -m unittest discover -s tests

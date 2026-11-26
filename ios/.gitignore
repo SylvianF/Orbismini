@@ -1,0 +1,7 @@
+# Fabriqués par XcodeGen et Xcode (project.yml fait foi).
+*.xcodeproj/
+build/
+App/Info.plist
+App/Orbismini.entitlements
+Widget/Info.plist
+Widget/OrbisminiWidget.entitlements

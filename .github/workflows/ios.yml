@@ -1,0 +1,118 @@
+# Application iPhone (dossier ios/) : projet fabriqué par XcodeGen, compilation, tests, puis
+# captures d’écran du simulateur (données d’exemple), publiées en artefacts de la tâche.
+# Aucun secret : rien n’est signé ici (simulateur seulement).
+name: Application iPhone
+on:
+  # L'application vit dans main (dossier ios/) : compilée quand elle change, pas pour le site seul.
+  push:
+    branches-ignore: [alertes, orbiscan-pc, captures-iphone]
+    paths: ["ios/**", ".github/workflows/ios.yml"]
+  pull_request:
+    paths: ["ios/**", ".github/workflows/ios.yml"]
+  workflow_dispatch:
+concurrency:
+  group: ios-${{ github.ref }}
+  cancel-in-progress: true
+permissions:
+  contents: write   # seulement pour la branche captures-iphone
+jobs:
+  build:
+    runs-on: macos-15
+    timeout-minutes: 45
+    defaults:
+      run:
+        working-directory: ios
+    steps:
+      - uses: actions/checkout@v4
+      - name: Xcode
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+      - name: XcodeGen
+        run: |
+          brew install xcodegen
+          sh sons.sh
+          xcodegen generate
+          xcodebuild -version
+      - name: Simulateur
+        id: sim
+        run: |
+          UDID=$(xcrun simctl list devices available -j | python3 -c '
+          import json, sys
+          devices = json.load(sys.stdin)["devices"]
+          ios = sorted((k for k in devices if "iOS" in k), key=lambda k: [int(x) for x in k.split("iOS-")[-1].split("-")])
+          for runtime in reversed(ios):
+              phones = [d for d in devices[runtime] if d["name"].startswith("iPhone") and "Pro" in d["name"] and "Max" not in d["name"]] \
+                  or [d for d in devices[runtime] if d["name"].startswith("iPhone")]
+              if phones:
+                  print(phones[0]["udid"]); break
+          ')
+          echo "Simulateur : $UDID"
+          xcrun simctl list devices | grep "$UDID"
+          echo "udid=$UDID" >> "$GITHUB_OUTPUT"
+      - name: Compilation et tests
+        run: |
+          mkdir -p build
+          ok=0
+          xcodebuild test \
+            -project Orbismini.xcodeproj -scheme Orbismini \
+            -destination "platform=iOS Simulator,id=${{ steps.sim.outputs.udid }}" \
+            -derivedDataPath build -resultBundlePath build/Tests.xcresult \
+            CODE_SIGNING_ALLOWED=NO > build/xcodebuild.log 2>&1 || ok=$?
+          grep -E "error:|warning: .*/ios/|Test Case .*(passed|failed)|Executed|[*][*] (BUILD|TEST)" build/xcodebuild.log | tail -400 || true
+          grep -E "Executed [0-9]+ tests" build/xcodebuild.log | tail -1 | sed 's/^/::notice::/' || true
+          # Erreurs en annotations (lisibles sans connexion par l’API publique de GitHub).
+          if [ "$ok" -ne 0 ]; then
+            grep -E "(error:|: error |failed \()" build/xcodebuild.log | sort -u | head -40 | while IFS= read -r line; do
+              short=$(printf '%s' "$line" | sed -E 's#^.*/ios/##' | cut -c1-900)
+              echo "::error::$short"
+            done
+            [ -n "$(grep -E "(error:|: error |failed \()" build/xcodebuild.log | head -1)" ] || tail -30 build/xcodebuild.log | while IFS= read -r line; do echo "::error::$(printf '%s' "$line" | cut -c1-900)"; done
+          fi
+          exit $ok
+      - name: Captures d’écran
+        run: |
+          UDID=${{ steps.sim.outputs.udid }}
+          APP=build/Build/Products/Debug-iphonesimulator/Orbismini.app
+          mkdir -p ../captures
+          xcrun simctl boot "$UDID" 2>/dev/null || true
+          xcrun simctl bootstatus "$UDID" -b
+          xcrun simctl status_bar "$UDID" override --time 9:41 --batteryState charged --batteryLevel 100 --cellularBars 4 --wifiBars 3 || true
+          xcrun simctl install "$UDID" "$APP"
+          for shot in cours meteo alerte widget widget2 widget3 reglages connexion scan rachat cours:light cours:graphite; do
+            screen=${shot%%:*}; theme=dark; [ "$shot" != "$screen" ] && theme=${shot#*:}
+            name=$screen; [ "$theme" != dark ] && name=$screen-$theme
+            xcrun simctl terminate "$UDID" fr.cndo.orbismini 2>/dev/null || true
+            xcrun simctl launch "$UDID" fr.cndo.orbismini -demo -ecran "$screen" -theme "$theme"
+            # Pages web (Cours, Rachat) : le serveur Render peut mettre une minute à se réveiller.
+            if [ "$screen" = rachat ] || [ "$screen" = cours ]; then sleep 45; else sleep 6; fi
+            xcrun simctl io "$UDID" screenshot "../captures/$name.png"
+          done
+          ls -la ../captures
+      - name: Captures sur la branche captures-iphone (lisibles sans connexion)
+        if: github.event_name != 'pull_request'
+        working-directory: captures
+        run: |
+          git init -q -b captures-iphone
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          printf 'Captures du simulateur (données d’exemple), tâche %s, %s.\n' "${{ github.run_number }}" "${GITHUB_SHA::7}" > LISEZ-MOI.txt
+          git add -A
+          git commit -q -m "Captures de l’application iPhone (${GITHUB_SHA::7})"
+          git push -q -f "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" captures-iphone
+      - name: Captures (artefact)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: captures-iphone
+          path: captures/
+          if-no-files-found: ignore
+      - name: Journal de compilation (artefact)
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: journal-compilation
+          path: |
+            ios/build/xcodebuild.log
+            ios/build/Tests.xcresult
+          if-no-files-found: ignore

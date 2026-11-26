@@ -1,8 +1,6 @@
-# Application iPhone vers TestFlight. Lancée par une étiquette « testflight-N » posée sur app-ios,
+# Application iPhone vers TestFlight. Lancée par une étiquette « testflight-N » posée sur main,
 # et toute seule le 1er des mois impairs : une version TestFlight expire au bout de 90 jours,
 # cet envoi la renouvelle même sans changement (au plus 62 jours d'écart).
-# L'envoi programmé ne part que de main (règle de GitHub) : ce fichier y est aussi, et il construit
-# alors la branche app-ios (là où vit l'application tant qu'elle n'est pas fusionnée dans main).
 # Secrets du dépôt (Settings → Secrets and variables → Actions), saisis par Sylvian :
 #   APPLE_TEAM_ID     identifiant d’équipe Apple (10 caractères)
 #   ASC_KEY_ID        identifiant de la clé API App Store Connect (10 caractères)
@@ -12,8 +10,7 @@
 # direct à TestFlight. Rien n’est gardé : la clé est effacée à la fin de la tâche.
 name: Application iPhone → TestFlight
 on:
-  # Étiquette « testflight-… » posée sur la branche app-ios (main n'est pas touchée : Render la
-  # met en ligne). Le bouton Run workflow ne paraît que si ce fichier est aussi sur main.
+  # Étiquette « testflight-… » ; envoi programmé et bouton Run workflow : main.
   push:
     tags: ["testflight-*"]
   schedule:
@@ -45,9 +42,6 @@ jobs:
           S_ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
           S_ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
       - uses: actions/checkout@v4
-        with:
-          # Envoi programmé ou bouton (depuis main) : la branche de l'application.
-          ref: ${{ github.event_name == 'push' && github.ref || 'app-ios' }}
       - uses: maxim-lobanov/setup-xcode@v1
         with:
           xcode-version: latest-stable
