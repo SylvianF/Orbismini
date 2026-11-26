@@ -70,7 +70,8 @@ struct ScanView: View {
                     }
                 }
                 .padding(.horizontal, 12)
-                .padding(.vertical, 8)
+                .padding(.top, 2)
+                .padding(.bottom, 12)
             }
             .buttonStyle(.plain)
             .orbisminiBackground()

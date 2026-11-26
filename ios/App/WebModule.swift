@@ -82,10 +82,13 @@ private struct WebPage: UIViewRepresentable {
                 + "localStorage.setItem('orbismini-theme','\(ThemeChoice.current.rawValue)')}catch(e){}",
             injectionTime: .atDocumentStart, forMainFrameOnly: false))
         // Onglets du site cachés dès le début (l’application a les siens) ; impression confiée à l’iPhone.
+        // Page remontée au plus haut : ni la ligne « Dernière actualisation » (elle paraît dans la
+        // pastille quand on tire l’écran vers le bas), ni les marges prévues pour les onglets du site.
         scripts.addUserScript(WKUserScript(
             source: """
             (function(){var s=document.createElement('style');
-            s.textContent='.views,header.top,#splash{display:none!important}';
+            s.textContent='.views,header.top,#splash,.fresh-text{display:none!important}'
+              +'main{padding-top:6px!important;padding-bottom:calc(env(safe-area-inset-bottom) + 16px)!important}';
             document.documentElement.appendChild(s);
             window.print=function(){window.webkit.messageHandlers.imprimer.postMessage(1)};})();
             """,

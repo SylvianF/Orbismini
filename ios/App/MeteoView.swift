@@ -41,8 +41,8 @@ struct MeteoView: View {
     var body: some View {
         NavigationStack {
             ScrollView {
-                VStack(alignment: .leading, spacing: 14) {
-                    StatusLine(status: model.status)
+                VStack(alignment: .leading, spacing: 12) {
+                    if case .fresh = model.status {} else if model.status != .idle { StatusLine(status: model.status) }
                     if let w = model.weather {
                         sky(w)
                         if let days = w.history?.filter({ $0.weather != nil }), !days.isEmpty {
@@ -63,7 +63,8 @@ struct MeteoView: View {
                     }
                 }
                 .padding(.horizontal, 12)
-                .padding(.vertical, 8)
+                .padding(.top, 2)
+                .padding(.bottom, 12)
             }
             .orbisminiBackground()
             .tabHeader("Météo de l’or")

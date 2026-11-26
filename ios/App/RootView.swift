@@ -71,7 +71,8 @@ enum LoadStatus: Equatable {
     case demo
 }
 
-/// Ligne d’état : à jour, serveur qui se réveille, hors connexion avec l’heure des données gardées.
+/// Ligne d’état : serveur qui se réveille, hors connexion avec l’heure des données gardées ;
+/// rien quand les données sont à jour.
 struct StatusLine: View {
     let status: LoadStatus
 
@@ -86,9 +87,9 @@ struct StatusLine: View {
             case .waking:
                 ProgressView().controlSize(.mini)
                 Text("Le serveur se réveille (jusqu’à une minute)…")
-            case .fresh(let d):
-                Image(systemName: "checkmark.circle").foregroundStyle(Theme.up)
-                Text("À jour à " + Fmt.time(d))
+            case .fresh:
+                // Tout va bien : rien à dire, la page reste au plus haut.
+                EmptyView()
             case .offline(let d, let why):
                 Image(systemName: "wifi.exclamationmark").foregroundStyle(Theme.down)
                 Text((d.map { "Données de " + Fmt.dayTime($0) + " · " } ?? "") + why)
