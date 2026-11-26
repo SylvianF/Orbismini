@@ -10,6 +10,7 @@
    "events": [
     "virement",
     "transfert",
+    "achat:Nancy",
     "achat:Troyes"
    ],
    "nom": "axqSwtwKk8hoNJBD0bq-1kqG9qAjuOe8yF5YX6VdwVElNjNlRDHiEv4=",
