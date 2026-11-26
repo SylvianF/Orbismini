@@ -94,6 +94,8 @@ private struct WebPage: UIViewRepresentable {
             """,
             injectionTime: .atDocumentStart, forMainFrameOnly: true))
         scripts.add(WeakHandler(context.coordinator), name: "imprimer")
+        // « Envoyer au client » (print.js) : PDF de l’estimation, SMS ou e-mail (EstimateShare).
+        scripts.add(WeakHandler(context.coordinator), name: "partager")
         // Photo d’une pièce de monnaie (cercle) ou d’une pièce d’identité (cadre, recto puis verso) :
         // appareil photo de l’application. RIB et facture : appareil photo normal de l’iPhone.
         scripts.addUserScript(WKUserScript(source: Self.photoBridge, injectionTime: .atDocumentEnd, forMainFrameOnly: false))
@@ -283,9 +285,18 @@ private struct WebPage: UIViewRepresentable {
             present(a, from: web) ?? completionHandler(nil)
         }
 
-        // window.print() du site (estimation imprimée) : impression de l’iPhone.
+        // window.print() du site (estimation imprimée) : impression de l’iPhone ;
+        // « Envoyer au client » : PDF de la même fiche, puis SMS ou e-mail au client.
         func userContentController(_ controller: WKUserContentController, didReceive message: WKScriptMessage) {
-            guard message.name == "imprimer", let web else { return }
+            guard let web else { return }
+            if message.name == "partager" {
+                let body = message.body as? [String: Any] ?? [:]
+                let text = { (k: String) in (body[k] as? String ?? "").trimmingCharacters(in: .whitespacesAndNewlines) }
+                let (client, phone, email) = (text("client"), text("phone"), text("email"))
+                Task { @MainActor in EstimateShare.shared.send(from: web, client: client, phone: phone, email: email) }
+                return
+            }
+            guard message.name == "imprimer" else { return }
             let p = UIPrintInteractionController.shared
             let info = UIPrintInfo.printInfo()
             info.outputType = .general
