@@ -4,6 +4,7 @@
 // paquet avec une clé tirée du secret de ce téléphone (jumelage des tickets) et le dépose dans sa
 // boîte sur Orbismini, qui ne peut pas le lire. Le paquet le plus récent (« at ») l'emporte.
 // L'onglet n'apparaît que sur un téléphone qui a reçu des chiffres.
+// Sous les chiffres, la VD en cours de la ville (droit « VD en cours » dans Orbis).
 (() => {
   'use strict';
   const view = document.getElementById('view-chiffres'),
@@ -238,6 +239,168 @@
     return out;
   }
 
+  // VD en cours (bloc « vd » d'Orbis, chiffres_telephone.vd_block) : le lot qui attend de
+  // partir chez CNDO, pas tout le stock. Valeur = paiement estimé au cours du moment. Orbis
+  // calcule l'effet du cours : onePercent (ce que 1 % d'or fait gagner ou perdre au lot) et
+  // dayEffect (ce que la variation de l'or sur 24 h lui a déjà fait gagner ou perdre).
+  const signed = v => (Number(v) > 0 ? '+ ' : Number(v) < 0 ? '− ' : '') + euro(Math.abs(Number(v)));
+  const VD_LEVEL = {
+    send: ['⚠ VD à envoyer à CNDO', 'ch-vd-send'],
+    sell: ['VD prête : moment de vendre', 'ch-vd-sell'],
+    wait: ['Rien ne presse', ''],
+  };
+  function vdSection(vd) {
+    const out = [];
+    const row = (label, value, cls = '') => out.push(el('div', { className: 'ch-row ' + cls }, el('span', { textContent: label }), el('b', { textContent: value })));
+    const head = el('h3', { className: 'list-heading', textContent: 'VD en cours' + (vd.since ? ' · depuis l’envoi du ' + short(vd.since) : '') });
+    const waiting = vd.retraction ? plural(vd.retraction, 'objet') + ' encore en délai de rétractation, hors du lot.' : '';
+    if (!vd.count)
+      return el('section', { className: 'section' }, head, el('p', { className: 'small', textContent: 'Aucun objet n’attend de partir chez CNDO.' + (waiting ? ' ' + waiting : '') }));
+    const [level, cls] = VD_LEVEL[vd.level] || [];
+    row('Lot', plural(vd.count, 'objet') + (vd.weight != null ? ' · ' + grams(vd.weight) : ''));
+    if (Number(vd.fineGold) > 0) row('Or fin', grams(vd.fineGold));
+    if (vd.value != null) row(vd.rate === 'last' ? 'Valeur au cours du dernier envoi' : 'Valeur au cours du jour', euro(vd.value));
+    if (vd.margin != null) row('Marge estimée', euro(vd.margin), margin(vd.margin));
+    if (Number(vd.onePercent) > 0) {
+      row('Or + 1 %', 'VD ' + signed(vd.onePercent), margin(1));
+      row('Or − 1 %', 'VD ' + signed(-vd.onePercent), margin(-1));
+    }
+    if (vd.change != null && vd.dayEffect != null)
+      row('Or sur 24 h : ' + (Number(vd.change) > 0 ? '+ ' : Number(vd.change) < 0 ? '− ' : '') + pct(Math.abs(Number(vd.change))), 'VD ' + signed(vd.dayEffect), margin(vd.dayEffect));
+    return el(
+      'section',
+      { className: 'section' },
+      head,
+      level ? el('p', { className: 'ch-vd-level ' + cls, textContent: level }) : null,
+      ...out,
+      waiting ? el('p', { className: 'small', textContent: waiting }) : null
+    );
+  }
+
+  // Demandes de virement (bloc « virements » d'Orbis, virements_telephone.py) : demandes en attente
+  // adressées aux personnes de ce téléphone, et résultat des marquages faits d'ici (« faits »). Le
+  // virement se passe dans l'application de la banque ; ici on copie l'IBAN, puis « Virement fait »
+  // part scellé vers les PC jumelés (ticket.js). Format : consigne-virements-telephone.md.
+  const MARKS = 'orbismini-virements-envoyes'; // {rid: {id, qui, at}} : marquages en route
+  const marks = () => {
+    try {
+      return JSON.parse(localStorage.getItem(MARKS) || '{}') || {};
+    } catch {
+      return {};
+    }
+  };
+  const keepMarks = v => {
+    try {
+      localStorage.setItem(MARKS, JSON.stringify(v));
+    } catch {}
+  };
+  async function copy(text, button) {
+    try {
+      await navigator.clipboard.writeText(text);
+    } catch {
+      const t = el('textarea', { value: text });
+      document.body.append(t);
+      t.select();
+      document.execCommand('copy');
+      t.remove();
+    }
+    const was = button.textContent;
+    button.textContent = 'Copié ✓';
+    setTimeout(() => (button.textContent = was), 1500);
+  }
+  const minutesOld = () => Math.max(0, Math.round((Date.now() - Date.parse(data.at)) / 60000));
+  const ageText = () => {
+    const m = minutesOld();
+    return (m > 10 ? '⚠ Liste vieille de ' + m + ' min : vérifie dans Orbis avant de payer' : m < 1 ? 'Liste à jour à l’instant' : 'Liste à jour il y a ' + m + ' min');
+  };
+  function transferCard(d, mark) {
+    const line = (label, value, extra) =>
+      value ? el('div', { className: 'ch-row ch-tr-line' }, el('span', { textContent: label }), el('b', { textContent: value }), extra || null) : null;
+    const copyButton = text => el('button', { type: 'button', className: 'ch-copy', textContent: 'Copier', onclick: e => copy(text, e.currentTarget) });
+    const when = d.at ? new Date(d.at).toLocaleString('fr-FR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '';
+    const status = el('p', { className: 'small ch-tr-status' });
+    const actions = el('div', { className: 'ch-tr-actions' });
+    const names = (d.qui || []).filter(Boolean);
+    const done = async qui => {
+      if (!window.OrbisminiCourrier) return (status.textContent = '✖ Envoi impossible depuis cette page.');
+      if (!confirm('Virement de ' + euro(d.montant) + ' à ' + (d.client || 'ce client') + ' fait par ' + qui + ' ?')) return;
+      actions.hidden = true;
+      status.textContent = 'Envoi…';
+      try {
+        const id = await window.OrbisminiCourrier.virementFait(d.rid, qui);
+        keepMarks({ ...marks(), [d.rid]: { id, qui, at: Date.now() } });
+        status.textContent = 'Envoyé (' + qui + ') : la demande disparaîtra au prochain passage d’Orbis (une minute environ).';
+      } catch (e) {
+        actions.hidden = false;
+        status.textContent = '✖ ' + (e.message || 'Envoi impossible');
+      }
+    };
+    if (mark) {
+      actions.hidden = true;
+      status.textContent = 'Envoi en cours (' + mark.qui + ') : la demande disparaîtra au prochain passage d’Orbis.';
+    } else if (names.length === 1) {
+      actions.append(el('button', { type: 'button', className: 'primary', textContent: 'Virement fait', onclick: () => done(names[0]) }));
+    } else {
+      actions.append(...names.map(n => el('button', { type: 'button', className: 'primary', textContent: 'Fait par ' + n, onclick: () => done(n) })));
+    }
+    return el(
+      'div',
+      { className: 'ch-obj ch-tr' },
+      el('div', { className: 'ch-obj-head' }, el('small', { textContent: [d.ville, when].filter(Boolean).join(' · ') }), el('b', { textContent: euro(d.montant) })),
+      el('b', { className: 'ch-tr-client', textContent: d.client || '' }),
+      d.alertes && d.alertes.length ? el('ul', { className: 'ch-tr-alerts' }, ...d.alertes.map(a => el('li', { textContent: '⚠ ' + a }))) : null,
+      line('Ordre', d.ordre),
+      line('Demandé par', d.by),
+      line('Titulaire', d.titulaire),
+      d.iban ? line('IBAN', d.ibanAffiche || d.iban, copyButton(d.iban)) : null,
+      d.bic ? line('BIC', d.bic, copyButton(d.bic)) : null,
+      d.banque
+        ? el('p', {
+            className: 'small',
+            textContent:
+              'Sans RIB : client déjà bénéficiaire à la banque' +
+              (d.banque.day ? ' (dernier virement le ' + short(d.banque.day) + (d.banque.amount ? ', ' + euro(d.banque.amount) : '') + ')' : '') +
+              '.',
+          })
+        : null,
+      d.note ? el('p', { className: 'small ch-tr-note', textContent: 'Note : ' + d.note }) : null,
+      status,
+      actions
+    );
+  }
+  function transfers(v) {
+    if (!v) return null;
+    const waiting = v.attente || [],
+      answered = new Set((v.faits || []).map(f => f.id)),
+      rids = new Set(waiting.map(d => d.rid)),
+      kept = marks();
+    // Marquage oublié quand la demande a quitté l'attente, qu'Orbis a répondu, ou après 2 jours.
+    for (const [rid, m] of Object.entries(kept)) if (!rids.has(rid) || answered.has(m.id) || Date.now() - m.at > 2 * 86400e3) delete kept[rid];
+    keepMarks(kept);
+    const results = (v.faits || [])
+      .filter(f => Date.now() - Date.parse(f.at) < 86400e3)
+      .slice(-5)
+      .reverse()
+      .map(f => el('p', { className: 'ch-tr-result ' + (f.ok ? 'ok' : 'ko'), textContent: (f.ok ? '✓ ' : '✖ ') + (f.message || (f.ok ? 'Virement marqué fait par ' + f.qui + '.' : 'Marquage refusé.')) }));
+    if (!waiting.length && !results.length && !(v.qui || []).length) return null;
+    return el(
+      'section',
+      { className: 'section ch-transfers' },
+      el('h3', { className: 'list-heading', textContent: 'Demandes de virement' + (waiting.length ? ' · ' + waiting.length : '') }),
+      el('p', { className: 'small ch-tr-age' + (minutesOld() > 10 ? ' ch-old' : ''), textContent: ageText() }),
+      ...(waiting.length ? waiting.map(d => transferCard(d, kept[d.rid])) : [el('p', { className: 'small', textContent: 'Aucune demande en attente.' })]),
+      ...results
+    );
+  }
+  // L'âge de la liste avance sans tout redessiner (les lignes ouvertes restent ouvertes).
+  setInterval(() => {
+    const age = view.querySelector('.ch-tr-age');
+    if (age && data) {
+      age.textContent = ageText();
+      age.classList.toggle('ch-old', minutesOld() > 10);
+    }
+  }, 30000);
+
   // Périodes envoyées par Orbis (Aujourd'hui… Année).
   const PERIODS = [
     ['today', 'Aujourd’hui'],
@@ -305,6 +468,16 @@
       return;
     }
     const cities = Object.keys(data.cities).sort();
+    if (!cities.length) {
+      view.replaceChildren(
+        ...[
+          el('section', { className: 'section' }, el('div', { className: 'eyebrow', textContent: 'CHIFFRES D’ORBIS' }),
+            el('p', { className: 'small', textContent: error || 'Pas de chiffres pour ce téléphone.' })),
+          transfers(data.virements),
+        ].filter(Boolean)
+      );
+      return;
+    }
     let city = read(CITY);
     if (!cities.includes(city)) city = cities[0];
     const c = data.cities[city] || {};
@@ -335,7 +508,9 @@
         cities.length > 1 ? pick : el('h2', { className: 'ch-city', textContent: city }),
         el('p', { className: 'small' + (age > 30 ? ' ch-old' : ''), textContent: (age > 30 ? '⚠ Pas mis à jour depuis plus de 30 minutes · ' : 'Mis à jour ') + 'le ' + when + (error ? ' · ' + error : '') })
       ),
+      transfers(data.virements),
       ...(c.periods ? cards(c) : []),
+      c.vd ? vdSection(c.vd) : null,
       c.periods
         ? null
         : el(
@@ -351,7 +526,7 @@
             el('h3', { className: 'list-heading', textContent: 'Mois en cours' + (c.month.days ? ' · ' + c.month.days + ' jour' + (c.month.days > 1 ? 's' : '') : '') }),
             ...rows(c.month)
           )
-        : null
+        : null,
       ].filter(Boolean)
     );
   }

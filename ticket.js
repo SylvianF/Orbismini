@@ -237,12 +237,25 @@
       localStorage.setItem(PROPOSALS, JSON.stringify(list.slice(-20)));
     } catch {}
   };
+  // Courrier scellé pour chaque PC jumelé (même enveloppe et même boîte que les tickets), gardé ici
+  // jusqu'à « rangé ». payload(link) donne le contenu signé avec le secret de ce jumelage.
+  async function courrier(id, path, payload) {
+    const links = Object.entries(settings().links);
+    if (!links.length) throw new Error('Ce téléphone n’est jumelé avec aucun PC (Scan → Ticket de frais).');
+    const p = { id, created: Date.now(), state: 'nouveau', packets: {} };
+    for (const [pc, link] of links) p.packets[pc] = b64(await seal(link.key, path, bytes(JSON.stringify(await payload(link)))));
+    keepProposals([...proposals(), p]);
+    followProposals();
+    return id;
+  }
+  const newId = letter => letter + new Date().toISOString().slice(0, 10).replace(/-/g, '') + '-' + hex(crypto.getRandomValues(new Uint8Array(10)));
+
   async function proposition(d) {
     const st = settings(),
       links = Object.entries(st.links);
     if (!links.length) return false; // téléphone jamais jumelé avec un PC : pas de trace possible
     const now = new Date();
-    const id = 'p' + now.toISOString().slice(0, 10).replace(/-/g, '') + '-' + hex(crypto.getRandomValues(new Uint8Array(10)));
+    const id = newId('p');
     const data = JSON.stringify({
       city: d.city,
       contact: d.contact,
@@ -253,15 +266,31 @@
       phoneName: st.phoneName || '',
     });
     const digest = hex(await crypto.subtle.digest('SHA-256', bytes(data)));
-    const p = { id, created: Date.now(), state: 'nouveau', packets: {} };
-    for (const [pc, link] of links) {
-      const signature = await mac(link.secret, ['proposition1', id, device(), digest]);
-      const payload = JSON.stringify({ v: 1, genre: 'proposition', id, phone: device(), data, mac: signature });
-      p.packets[pc] = b64(await seal(link.key, '/proposition/' + id, bytes(payload)));
-    }
-    keepProposals([...proposals(), p]);
-    followProposals();
+    await courrier(id, '/proposition/' + id, async link => ({
+      v: 1,
+      genre: 'proposition',
+      id,
+      phone: device(),
+      data,
+      mac: await mac(link.secret, ['proposition1', id, device(), digest]),
+    }));
     return true;
+  }
+  // « Virement fait » (chiffres.js, section Demandes de virement) : marquage scellé comme un ticket,
+  // chemin « /ticket/<id> », mac = HMAC(secret, "virement1|id|rid|qui|quand|phone"). Un nouvel id à
+  // chaque appui. Format : consigne-virements-telephone.md (session Orbis, 27/11/2026).
+  async function virementFait(rid, qui) {
+    const id = newId('v'),
+      quand = new Date().toISOString();
+    return courrier(id, '/ticket/' + id, async link => ({
+      genre: 'virement-fait',
+      id,
+      phone: device(),
+      rid,
+      qui,
+      quand,
+      mac: await mac(link.secret, ['virement1', id, rid, qui, quand, device()]),
+    }));
   }
   async function followProposals() {
     const week = Date.now() - 7 * 86400e3;
@@ -280,6 +309,7 @@
     keepProposals(list.filter(p => p.state !== 'range'));
   }
   window.OrbisminiPropositions = { envoyer: proposition };
+  window.OrbisminiCourrier = { virementFait };
 
   async function follow() {
     followProposals();

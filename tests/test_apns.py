@@ -220,7 +220,7 @@ class OrbisEventTests(Base):
         self.assertEqual(urls[0], "https://api.push.apple.com/3/device/" + TOKEN1)
         self.assertEqual(sorted(urls[1:]), sorted("https://api.push.apple.com/3/device/" + t for t in (TOKEN1, TOKEN2)))
         self.assertEqual(self.apple[0][2]["aps"]["alert"], {"title": "Nouvelle demande de virement", "body": "Rachel, Nancy"})
-        self.assertEqual(self.apple[0][2]["ecran"], "orbis")
+        self.assertEqual(self.apple[0][2]["ecran"], "chiffres")   # demande de virement : onglet Chiffres
         self.assertEqual(self.ntfy, [])
 
     def test_unchecking_and_bad_requests(self):

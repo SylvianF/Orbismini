@@ -68,7 +68,7 @@ Cours et courbe sur l’écran d’accueil grâce à l’app Scriptable : script
 - `alerte.py` : alerte de cours commune avec Orbis ; `alerte_appareils.py` : alerte propre à
   chaque téléphone (gardée sur GitHub, branche « alertes ») ; page : `alerte-cours.js`.
 - `theme.js` : thèmes Saphir, Onyx et Perle, repris d'Orbis (menu en bas de l'écran des cours).
-- `chiffres.js` : chiffres d'Orbis (achats, marges, ventes) déchiffrés sur le téléphone ; boîtes en mémoire : `tickets_boite.Figures`.
+- `chiffres.js` : chiffres d'Orbis (achats, marges, ventes, VD en cours) déchiffrés sur le téléphone ; boîtes en mémoire : `tickets_boite.Figures`.
 - `cours-plus.js` : recherche, favoris, prix qui clignotent, alerte cours périmés,
   écran d’ouverture.
 - Calculs repris de l’ancienne GoldApp : `estimation.js` + `estimation.css`, `alignment.js`,

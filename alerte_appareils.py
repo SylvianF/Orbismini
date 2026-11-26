@@ -392,7 +392,10 @@ class Store:
             if not apns.enabled() or not tokens:
                 return 0
             self.sent.add(mark)
-        gone = apns.send(tokens, title, body, post, screen="chiffres" if kind in CITY_EVENTS else "orbis")
+        # Achats, ventes, risque, VD et demandes de virement : l'onglet Chiffres (section des
+        # demandes en tête) ; transferts : l'application s'ouvre simplement.
+        screen = "chiffres" if kind in CITY_EVENTS or kind == "virement" else "orbis"
+        gone = apns.send(tokens, title, body, post, screen=screen)
         self.forget_apns(gone)
         return len([did for did in chosen if self.apns_tokens(did)])
 

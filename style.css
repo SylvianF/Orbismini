@@ -1305,6 +1305,19 @@ body::before {
 .ch-margin.ch-neg b {
   color: var(--down);
 }
+/* VD en cours : niveau d'alerte d'Orbis (à envoyer, prête à vendre). */
+.ch-vd-level {
+  margin: 0 0 4px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--muted);
+}
+.ch-vd-level.ch-vd-sell {
+  color: var(--gold);
+}
+.ch-vd-level.ch-vd-send {
+  color: var(--down);
+}
 .views button[hidden] {
   display: none;
 }
@@ -1513,4 +1526,68 @@ body::before {
 .ch-obj-head b {
   color: var(--gold);
   font-variant-numeric: tabular-nums;
+}
+
+/* Demandes de virement (chiffres.js) : une carte par demande, alertes bien visibles. */
+.ch-transfers .ch-tr {
+  margin-top: 10px;
+}
+.ch-tr-client {
+  display: block;
+  margin-top: 4px;
+  font-size: 16px;
+}
+.ch-tr-line {
+  align-items: center;
+}
+.ch-tr-line b {
+  margin-left: auto;
+  white-space: normal;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+.ch-copy {
+  flex: none;
+  margin-left: 8px;
+  min-height: 32px;
+  padding: 4px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--gold);
+  background: transparent;
+  color: var(--gold);
+  font-size: 13px;
+}
+.ch-tr-alerts {
+  margin: 8px 0 4px;
+  padding: 8px 10px;
+  list-style: none;
+  border-radius: 8px;
+  background: rgba(255, 156, 164, 0.12);
+  color: var(--down);
+  font-size: 13.5px;
+  font-weight: 600;
+}
+.ch-tr-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+.ch-tr-actions button {
+  flex: 1 1 140px;
+  min-height: 44px;
+}
+.ch-tr-status:empty {
+  display: none;
+}
+.ch-tr-result {
+  margin: 8px 0 0;
+  font-size: 13px;
+}
+.ch-tr-result.ok {
+  color: var(--up);
+}
+.ch-tr-result.ko {
+  color: var(--down);
 }

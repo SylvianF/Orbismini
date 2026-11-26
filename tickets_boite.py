@@ -29,7 +29,7 @@ MAX_PACKET = 12 * 1024 * 1024
 MAX_TOTAL = 120 * 1024 * 1024
 MAX_TICKETS = 300
 MAX_PCS_PER_TICKET = 4
-PER_DAY = 30                # tickets par téléphone et par jour
+PER_DAY = 100               # dépôts par téléphone et par jour (tickets, propositions, virements faits)
 
 
 BOX = re.compile(r"[0-9a-f]{64}")

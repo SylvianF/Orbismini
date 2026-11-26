@@ -1,5 +1,20 @@
 # Historique
 
+## 27/11/2026 — Chiffres : demandes de virement et VD en cours
+
+- **Demandes de virement** (bloc « virements » envoyé par Orbis) : en tête de l'onglet Chiffres, une
+  carte par demande (montant, client, alertes d'Orbis en évidence, ordre, qui demande, titulaire,
+  IBAN et BIC avec « Copier », note, demande sans RIB). Âge de la liste visible, avertissement
+  au-delà de 10 minutes. « Virement fait » (choix de la personne s'il y en a plusieurs) part scellé
+  vers les PC jumelés, comme un ticket (`/ticket/<id>`, mac « virement1 »). Résultats d'Orbis
+  affichés (refus avec motif). Un téléphone sans chiffres mais avec des virements est géré.
+- **VD en cours** (bloc « vd », droit « VD en cours » d'Orbis) : lot, or fin, valeur au cours,
+  marge estimée, effet de ±1 % et de la variation sur 24 h, niveau (à envoyer, prête à vendre).
+  Affichage écrit par la session Orbis, repris ici.
+- La notification « Nouvelle demande de virement » ouvre l'onglet Chiffres. Boîte aux lettres :
+  100 dépôts par téléphone et par jour (tickets, propositions, virements faits).
+- Rien ne change tant qu'Orbis n'envoie pas ces blocs (version d'Orbis à venir).
+
 ## 27/11/2026 — Propositions envoyées depuis le téléphone : trace dans Orbis
 
 - « Envoyer au client » laisse aussi une trace dans « Dernières propositions » d'Orbis : la
