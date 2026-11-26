@@ -95,6 +95,7 @@ class DeviceTests(Base):
         self.assertEqual(headers["authorization"], "bearer jeton")
         self.assertEqual(payload["aps"]["alert"]["title"], self.ntfy[0][1])   # même texte que ntfy
         self.assertEqual(payload["aps"]["alert"]["body"], self.ntfy[0][2])
+        self.assertEqual(payload["aps"]["sound"], "orbismini.caf")      # son choisi par Sylvian
 
     def test_switched_off_ntfy_unchanged_and_nothing_to_apple(self):
         s, d1 = self.store(), AA.device_id(PHONE1)

@@ -1,5 +1,11 @@
 # Historique
 
+## 26/11/2026 — Notifications de l'application iPhone : un son commun
+
+- Les notifications envoyées par Apple demandent le son « orbismini.caf », rangé dans
+  l'application (« Melodic bonus collect » de Mixkit, choisi par Sylvian). Une version de
+  l'application qui ne l'a pas encore joue le son d'iOS. Site inchangé.
+
 ## 26/11/2026 — La date d'actualisation dans la pastille « Tire pour actualiser »
 
 - La pastille qui descend quand on tire l'écran vers le bas affiche aussi « Dernière
