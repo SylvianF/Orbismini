@@ -256,6 +256,14 @@
           phone: form.elements.phone.value.trim(),
           email: form.elements.email.value.trim(),
         });
+        // Trace dans « Dernières propositions » d'Orbis, par les PC jumelés (ticket.js) ; sans PC
+        // jumelé, rien à faire : l'envoi au client ne dépend pas d'elle.
+        window.OrbisminiPropositions?.envoyer({
+          city: agence,
+          contact,
+          client: { name: client, phone: form.elements.phone.value.trim(), email: form.elements.email.value.trim() },
+          rows: rows.map(({ fcNet, ...row }) => row),
+        }).catch(() => {});
       } catch (e) {
         say(e.message || 'Envoi impossible');
       } finally {

@@ -1,5 +1,12 @@
 # Historique
 
+## 27/11/2026 — Propositions envoyées depuis le téléphone : trace dans Orbis
+
+- « Envoyer au client » laisse aussi une trace dans « Dernières propositions » d'Orbis : la
+  proposition est scellée pour chaque PC jumelé (même enveloppe et même boîte aux lettres que les
+  tickets, id « p… », chemin « /proposition/<id> », signature du jumelage), puis le relais Orbiscan
+  la remet à Orbis. Gardée sur le téléphone jusqu'à « rangé ». Sans PC jumelé, pas de trace.
+
 ## 27/11/2026 — Mentions des agences pour la Proposition de rachat
 
 - `agences-proposition.json` : raison sociale, adresse, téléphone et e-mail de Troyes, Nancy et

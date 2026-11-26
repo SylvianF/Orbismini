@@ -217,7 +217,72 @@
     return data.state;
   }
   // État de chaque ticket en route ; inconnu d'Orbismini (redémarré) : renvoyé.
+  // ---------------------------------------------------------------- propositions de rachat
+  // Trace d'une proposition envoyée au client (Rachat → Imprimer → « Envoyer au client », print.js)
+  // vers « Dernières propositions » d'Orbis : même enveloppe et même boîte aux lettres que les
+  // tickets, id « p<AAAAMMJJ>-<20 hex> », chemin scellé « /proposition/<id> ». Le texte « data » est
+  // signé tel quel : mac = HMAC(secret, "proposition1|id|phone|sha256(data)"). Format convenu avec
+  // le relais Orbiscan et Orbis (consigne-relais-propositions.md, 27/11/2026). Gardée ici
+  // (localStorage) jusqu'à « rangé », renvoyée toute seule si Orbismini l'a perdue.
+  const PROPOSALS = 'orbismini-propositions';
+  const proposals = () => {
+    try {
+      return JSON.parse(localStorage.getItem(PROPOSALS) || '[]') || [];
+    } catch {
+      return [];
+    }
+  };
+  const keepProposals = list => {
+    try {
+      localStorage.setItem(PROPOSALS, JSON.stringify(list.slice(-20)));
+    } catch {}
+  };
+  async function proposition(d) {
+    const st = settings(),
+      links = Object.entries(st.links);
+    if (!links.length) return false; // téléphone jamais jumelé avec un PC : pas de trace possible
+    const now = new Date();
+    const id = 'p' + now.toISOString().slice(0, 10).replace(/-/g, '') + '-' + hex(crypto.getRandomValues(new Uint8Array(10)));
+    const data = JSON.stringify({
+      city: d.city,
+      contact: d.contact,
+      client: d.client,
+      rows: d.rows,
+      lines: d.lines || [],
+      at: now.toISOString(),
+      phoneName: st.phoneName || '',
+    });
+    const digest = hex(await crypto.subtle.digest('SHA-256', bytes(data)));
+    const p = { id, created: Date.now(), state: 'nouveau', packets: {} };
+    for (const [pc, link] of links) {
+      const signature = await mac(link.secret, ['proposition1', id, device(), digest]);
+      const payload = JSON.stringify({ v: 1, genre: 'proposition', id, phone: device(), data, mac: signature });
+      p.packets[pc] = b64(await seal(link.key, '/proposition/' + id, bytes(payload)));
+    }
+    keepProposals([...proposals(), p]);
+    followProposals();
+    return true;
+  }
+  async function followProposals() {
+    const week = Date.now() - 7 * 86400e3;
+    const list = proposals().filter(p => p.created > week);
+    if (!list.length) return keepProposals([]);
+    try {
+      const r = await fetch('/api/tickets/etat?ids=' + list.map(p => p.id).join(','), {
+        headers: { 'X-Appareil': device() },
+        cache: 'no-store',
+      });
+      const states = (await r.json()).states || {};
+      for (const p of list) {
+        p.state = states[p.id] === 'inconnu' || !states[p.id] ? await deliver(p).catch(() => p.state) : states[p.id];
+      }
+    } catch {}
+    keepProposals(list.filter(p => p.state !== 'range'));
+  }
+  window.OrbisminiPropositions = { envoyer: proposition };
+
   async function follow() {
+    followProposals();
     const list = await outbox().catch(() => []);
     const open = list.filter(t => t.state !== 'range');
     if (open.length) {
