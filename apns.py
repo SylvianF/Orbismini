@@ -95,6 +95,11 @@ def _post(url, headers, payload):
     return r.status_code, reason
 
 
+# Son des notifications, rangé dans l’application (ios/sons.sh) ; une version qui ne l’a pas
+# encore joue le son d’iOS à la place.
+SOUND = "orbismini.caf"
+
+
 def send(tokens, title, body, post=None, screen="alerte"):
     """Une notification vers chaque (jeton, environnement). Renvoie les jetons qu’Apple refuse
     pour de bon (application effacée…), à oublier. Ne lève jamais : ntfy ne doit rien sentir."""
@@ -102,7 +107,7 @@ def send(tokens, title, body, post=None, screen="alerte"):
         return []
     post = post or _post
     payload = json.dumps(
-        {"aps": {"alert": {"title": title, "body": body}, "sound": "default"}, "ecran": screen},
+        {"aps": {"alert": {"title": title, "body": body}, "sound": SOUND}, "ecran": screen},
         ensure_ascii=False,
     ).encode("utf-8")
     gone = []

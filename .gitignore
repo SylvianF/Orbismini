@@ -1,2 +1,4 @@
 __pycache__/
 *.pyc
+# Son des notifications : téléchargé à la compilation (licence Mixkit, ios/sons.sh)
+ios/App/Sons/

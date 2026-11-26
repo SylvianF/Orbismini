@@ -30,6 +30,7 @@ jobs:
       - name: XcodeGen
         run: |
           brew install xcodegen
+          sh sons.sh
           xcodegen generate
           xcodebuild -version
       - name: Simulateur
