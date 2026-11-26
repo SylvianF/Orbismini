@@ -23,14 +23,14 @@ final class EstimateShare: NSObject {
         if !email.isEmpty, MFMailComposeViewController.canSendMail() {
             choices.append(("E-mail à " + email, { self.mail(pdf, name, to: email, from: host) }))
         }
-        choices.append(("Autre (Messages, WhatsApp, AirDrop…)", { self.other(pdf, name, from: host, anchor: web) }))
+        choices.append(("Autre (Messages, WhatsApp, AirDrop…)", { self.other(pdf, name, from: host) }))
         if choices.count == 1 { return choices[0].1() }
         let sheet = UIAlertController(title: "Envoyer l’estimation", message: client.isEmpty ? nil : client, preferredStyle: .actionSheet)
         for (title, action) in choices {
             sheet.addAction(UIAlertAction(title: title, style: .default) { _ in action() })
         }
         sheet.addAction(UIAlertAction(title: "Annuler", style: .cancel))
-        sheet.popoverPresentationController?.sourceView = web
+        // Pas d’ancrage : sur iPhone, iOS en ferait une petite bulle en haut de la page (vu par Sylvian).
         host.present(sheet, animated: true)
     }
 
@@ -85,11 +85,10 @@ final class EstimateShare: NSObject {
         host.present(c, animated: true)
     }
 
-    private func other(_ pdf: Data, _ name: String, from host: UIViewController, anchor: UIView) {
+    private func other(_ pdf: Data, _ name: String, from host: UIViewController) {
         let url = FileManager.default.temporaryDirectory.appendingPathComponent(name)
         try? pdf.write(to: url, options: .atomic)
         let share = UIActivityViewController(activityItems: [url], applicationActivities: nil)
-        share.popoverPresentationController?.sourceView = anchor
         host.present(share, animated: true)
     }
 }

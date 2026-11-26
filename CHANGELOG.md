@@ -1,5 +1,10 @@
 # Historique
 
+## 26/11/2026 — Application iPhone : fenêtre « Envoyer l'estimation » lisible
+
+- Le choix SMS / e-mail / autre s'affichait en toute petite bulle en haut de la page (iOS récent) :
+  il s'ouvre maintenant en bas de l'écran, en grand. Site inchangé.
+
 ## 26/11/2026 — Ménage du code
 
 - Rien ne change à l’écran.
