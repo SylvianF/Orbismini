@@ -1,5 +1,12 @@
 # Historique
 
+## 26/11/2026 — Ménage du code
+
+- Rien ne change à l’écran.
+- Styles .view-link (ancien bouton Orbiscan de la barre du bas) et .ch-card retirés.
+- cpor.py, server.py : six imports inutiles retirés.
+- README : cartes de l’onglet Scan et onglet Chiffres décrits.
+
 ## 26/11/2026 — Application iPhone : PDF de l'estimation, SMS ou e-mail au client
 
 - Le bouton « Envoyer au client » de Rachat → Imprimer fait le PDF A4 de la fiche et propose un
