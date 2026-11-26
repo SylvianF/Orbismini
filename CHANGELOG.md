@@ -1,5 +1,15 @@
 # Historique
 
+## 27/11/2026 — « Envoyer au client » : la Proposition de rachat d'Orbis
+
+- `proposition_pdf.py` : copie tel quel du module d'Orbis (même PDF qu'au comptoir), avec
+  `logo-impression.jpg` ; `proposition.py` et `POST /api/proposition` le fabriquent pour le
+  téléphone. Rien n'est gardé sur le serveur. `reportlab` ajouté à requirements.txt.
+- Fenêtre d'impression (application iPhone) : agence de la proposition (Troyes, Nancy, Calais) et
+  « Votre contact », retenus sur le téléphone.
+- Tant que les mentions des agences (`agences-proposition.json`, fournies par Orbis) manquent, la
+  fiche imprimable sert de secours.
+
 ## 26/11/2026 — Application iPhone : fenêtre « Envoyer l'estimation » lisible
 
 - Le choix SMS / e-mail / autre s'affichait en toute petite bulle en haut de la page (iOS récent) :

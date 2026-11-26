@@ -806,6 +806,21 @@ class Handler(SimpleHTTPRequestHandler):
                 return self.send_json(pieces_scan.identify(pieces_scan.FOLDER, photos))
             except (ValueError, TypeError) as error:
                 return self.send_json({"error": str(error)[:300]}, 400)
+        if urlparse(self.path).path == "/api/proposition":
+            # « Envoyer au client » (application iPhone) : la Proposition de rachat d’Orbis en PDF.
+            if not self.guard("/api/proposition"):
+                return
+            import proposition
+
+            try:
+                pdf = proposition.make(json.loads(self.read_limited(2_000_000) or b"{}"))
+                return self.send_bytes(200, "application/pdf", pdf)
+            except LookupError as error:
+                return self.send_json({"error": str(error)[:300]}, 503)
+            except ImportError:
+                return self.send_json({"error": "Fabrication du PDF indisponible (reportlab absent sur Render)."}, 503)
+            except (ValueError, TypeError) as error:
+                return self.send_json({"error": str(error)[:300]}, 400)
         if urlparse(self.path).path == "/api/apns":
             # Application iPhone : jeton de notification de ce téléphone (apns.py, éteint par défaut).
             if not self.guard("/api/apns"):

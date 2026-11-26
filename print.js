@@ -5,7 +5,7 @@
   const dialog = document.createElement('dialog');
   dialog.id = 'client-print-dialog';
   dialog.innerHTML =
-    '<form><h2>Imprimer l’estimation</h2><label>Nom et prénom<input name="client" autocomplete="off"></label><label>Téléphone<input name="phone" type="tel" autocomplete="off"></label><label>Adresse e-mail<input name="email" type="email" autocomplete="off"></label><label class="print-check"><input name="internal" type="checkbox">Imprimer les pourcentages FC / GtaX</label><p id="print-error" role="alert"></p><div class="print-actions"><button type="button" id="print-cancel" class="secondary">Annuler</button><button type="button" id="print-send" class="secondary" hidden>Envoyer au client</button><button type="submit">Imprimer</button></div></form>';
+    '<form><h2>Imprimer l’estimation</h2><label>Nom et prénom<input name="client" autocomplete="off"></label><label>Téléphone<input name="phone" type="tel" autocomplete="off"></label><label>Adresse e-mail<input name="email" type="email" autocomplete="off"></label><label class="print-check"><input name="internal" type="checkbox">Imprimer les pourcentages FC / GtaX</label><div id="print-proposition" hidden><p class="print-agency-title">Agence de la proposition</p><div class="print-agencies" role="group"><button type="button" data-agence="Troyes">Troyes</button><button type="button" data-agence="Nancy">Nancy</button><button type="button" data-agence="Calais">Calais</button></div><label>Votre contact<input name="contact" autocomplete="off" placeholder="Prénom et téléphone de l’agence"></label></div><p id="print-error" role="alert"></p><div class="print-actions"><button type="button" id="print-cancel" class="secondary">Annuler</button><button type="button" id="print-send" class="secondary" hidden>Envoyer au client</button><button type="submit">Imprimer</button></div></form>';
   document.body.append(dialog);
   const sheet = document.createElement('article');
   sheet.id = 'client-print-sheet';
@@ -177,21 +177,91 @@
     dialog.close();
     window.print();
   });
-  // Application iPhone : « Envoyer au client » fait un PDF de la fiche et ouvre un SMS ou un e-mail
-  // adressé au client (téléphone et e-mail saisis ci-dessus). Jamais les pourcentages internes.
+  // Application iPhone : « Envoyer au client » demande au serveur la Proposition de rachat d'Orbis
+  // (même PDF qu'au comptoir, proposition.py), puis l'application ouvre un SMS ou un e-mail adressé
+  // au client. Agence et contact retenus sur ce téléphone. Jamais les pourcentages internes.
   const share = window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.partager;
   const send = document.getElementById('print-send');
+  const KEPT = 'orbismini-proposition';
+  const kept = () => {
+    try {
+      return JSON.parse(localStorage.getItem(KEPT) || '{}') || {};
+    } catch {
+      return {};
+    }
+  };
+  const keep = v => {
+    try {
+      localStorage.setItem(KEPT, JSON.stringify({ ...kept(), ...v }));
+    } catch {}
+  };
+  const agencies = [...dialog.querySelectorAll('[data-agence]')];
+  const showAgency = name => agencies.forEach(b => b.classList.toggle('chosen', b.dataset.agence === name));
+  agencies.forEach(b =>
+    b.addEventListener('click', () => {
+      keep({ agence: b.dataset.agence });
+      showAgency(b.dataset.agence);
+    })
+  );
+  const toBase64 = blob =>
+    new Promise((ok, ko) => {
+      const reader = new FileReader();
+      reader.onload = () => ok(String(reader.result).split(',')[1] || '');
+      reader.onerror = () => ko(new Error('PDF illisible'));
+      reader.readAsDataURL(blob);
+    });
   if (share) {
     send.hidden = false;
+    document.getElementById('print-proposition').hidden = false;
+    document.getElementById('est-print').addEventListener('click', () => {
+      showAgency(kept().agence);
+      form.elements.contact.value = kept().contact || '';
+    });
     send.addEventListener('click', async () => {
-      form.elements.internal.checked = false;
-      if (!(await prepare())) return;
-      dialog.close();
-      share.postMessage({
-        client: form.elements.client.value.trim(),
-        phone: form.elements.phone.value.trim(),
-        email: form.elements.email.value.trim(),
-      });
+      const say = text => (document.getElementById('print-error').textContent = text);
+      const rows = window.GoldEstimate.snapshot();
+      const client = form.elements.client.value.trim();
+      const agence = kept().agence;
+      if (!rows.length || rows.some(r => !r.result)) return say('Complète toutes les lignes avant d’envoyer.');
+      if (!client) return say('Indique le nom du client.');
+      if (!agence) return say('Choisis l’agence de la proposition.');
+      const contact = form.elements.contact.value.trim();
+      keep({ contact });
+      send.disabled = true;
+      send.textContent = 'Préparation…';
+      try {
+        const r = await fetch('/api/proposition', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          cache: 'no-store',
+          body: JSON.stringify({
+            agence,
+            contact,
+            client: { name: client, phone: form.elements.phone.value.trim(), email: form.elements.email.value.trim() },
+            rows: rows.map(({ fcNet, ...row }) => row),
+          }),
+        });
+        // 503 : PDF d'Orbis pas encore possible (mentions des agences, reportlab) : la fiche imprimable
+        // sert de secours, faite en PDF par l'application.
+        if (!r.ok && r.status !== 503)
+          throw Error((await r.json().catch(() => ({}))).error || 'Orbismini ne répond pas (' + r.status + ')');
+        const pdf = r.ok ? await toBase64(await r.blob()) : '';
+        // Fiche imprimable aussi prête : une application pas encore à jour en fait elle-même le PDF.
+        form.elements.internal.checked = false;
+        if (!(await prepare())) return;
+        dialog.close();
+        share.postMessage({
+          pdf,
+          client,
+          phone: form.elements.phone.value.trim(),
+          email: form.elements.email.value.trim(),
+        });
+      } catch (e) {
+        say(e.message || 'Envoi impossible');
+      } finally {
+        send.disabled = false;
+        send.textContent = 'Envoyer au client';
+      }
     });
   }
   document.getElementById('est-reset').addEventListener('click', () => {

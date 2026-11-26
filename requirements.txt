@@ -2,3 +2,5 @@
 # Sans elles, le site et ntfy marchent comme avant (rien n’est chargé).
 httpx[http2]==0.27.2
 cryptography==43.0.3
+# Proposition de rachat en PDF (proposition_pdf.py, copie de celui d’Orbis, même version qu’Orbis).
+reportlab==4.4.9
