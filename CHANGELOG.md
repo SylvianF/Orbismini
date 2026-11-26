@@ -1,5 +1,11 @@
 # Historique
 
+## 27/11/2026 — Mentions des agences pour la Proposition de rachat
+
+- `agences-proposition.json` : raison sociale, adresse, téléphone et e-mail de Troyes, Nancy et
+  Calais, tels qu'Orbis les imprime (fournis par la session Orbis). « Envoyer au client » envoie
+  maintenant la Proposition de rachat d'Orbis. Site inchangé.
+
 ## 27/11/2026 — Application iPhone : la Proposition de rachat d'Orbis envoyée au client
 
 - L'application envoie par SMS ou e-mail le PDF fabriqué par le serveur (Proposition de rachat

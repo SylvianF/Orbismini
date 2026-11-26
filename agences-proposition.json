@@ -1,0 +1,20 @@
+{
+  "Calais": {
+    "company": "SAS Comptoir Calaisien De l’OR",
+    "address": "59 Boulevard Jacquard\n62100 CALAIS",
+    "phone": "03 21 35 70 58",
+    "email": "calais@gold.fr"
+  },
+  "Nancy": {
+    "company": "EURL Comptoir Nancéien de l’Or",
+    "address": "32 rue Gambetta\n54000 NANCY",
+    "phone": "03 83 27 35 79",
+    "email": "nancy@gold.fr"
+  },
+  "Troyes": {
+    "company": "EURL Comptoir Troyen De l’Or",
+    "address": "31 rue Urbain IV\n10000 TROYES",
+    "phone": "03 25 41 33 28",
+    "email": "troyes@gold.fr"
+  }
+}
