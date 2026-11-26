@@ -1,4 +1,4 @@
 __pycache__/
 *.pyc
-# Son des notifications : téléchargé à la compilation (licence Mixkit, ios/sons.sh)
+# Son des notifications : converti à la compilation depuis ios/Sons/orbis.wav (ios/sons.sh)
 ios/App/Sons/

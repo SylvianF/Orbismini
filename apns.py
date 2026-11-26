@@ -95,8 +95,8 @@ def _post(url, headers, payload):
     return r.status_code, reason
 
 
-# Son des notifications, rangé dans l’application (ios/sons.sh) ; une version qui ne l’a pas
-# encore joue le son d’iOS à la place.
+# Son des notifications, le même que celui d’Orbis (demande de virement), rangé dans
+# l’application (ios/sons.sh) ; une version qui ne l’a pas encore joue le son d’iOS à la place.
 SOUND = "orbismini.caf"
 
 
