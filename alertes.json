@@ -8,6 +8,7 @@
     }
    ],
    "events": [
+    "virement",
     "transfert",
     "achat:Calais",
     "achat:Nancy",
