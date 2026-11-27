@@ -92,7 +92,8 @@
     }
    ],
    "events": [
-    "virement"
+    "virement",
+    "transfert"
    ],
    "seen": "2026-11-27",
    "state": {
