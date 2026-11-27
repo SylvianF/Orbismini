@@ -91,6 +91,9 @@
      "token": "817a7d32a5865c027508b4d84107870ca129cdf17f615bf2c19a78b0164f8d2d"
     }
    ],
+   "events": [
+    "virement"
+   ],
    "seen": "2026-11-27",
    "state": {
     "hits": []
