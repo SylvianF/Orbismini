@@ -103,6 +103,7 @@
    "events": [
     "virement",
     "transfert",
+    "achat:Calais",
     "achat:Nancy",
     "vente:Nancy",
     "risque:Nancy",
