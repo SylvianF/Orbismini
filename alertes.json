@@ -104,7 +104,8 @@
     "virement",
     "transfert",
     "achat:Nancy",
-    "vente:Nancy"
+    "vente:Nancy",
+    "risque:Nancy"
    ],
    "seen": "2026-11-27",
    "state": {
