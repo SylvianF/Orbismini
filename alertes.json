@@ -103,7 +103,8 @@
    "events": [
     "virement",
     "transfert",
-    "achat:Nancy"
+    "achat:Nancy",
+    "vente:Nancy"
    ],
    "seen": "2026-11-27",
    "state": {
